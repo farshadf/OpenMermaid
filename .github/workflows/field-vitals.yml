@@ -1,0 +1,43 @@
+name: Field Web Vitals
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 9 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: field-web-vitals
+  cancel-in-progress: true
+
+jobs:
+  crux-history:
+    name: CrUX history snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Use Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Query configured production field data
+        run: node scripts/report-crux.mjs
+        env:
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+          CRUX_API_KEY: ${{ secrets.CRUX_API_KEY }}
+
+      - name: Upload aggregate field report
+        uses: actions/upload-artifact@v4
+        with:
+          name: crux-history-${{ github.run_id }}
+          path: |
+            reports/crux-history.json
+            reports/crux-history.md
+          if-no-files-found: error
+          retention-days: 90

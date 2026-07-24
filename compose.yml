@@ -1,0 +1,32 @@
+name: open-mermaid
+
+services:
+  web:
+    image: open-mermaid:${OPEN_MERMAID_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${OPEN_MERMAID_BIND_PORT:-8088}:8080'
+    read_only: true
+    user: '101:101'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    pids_limit: 100
+    stop_grace_period: 10s
+    healthcheck:
+      test: ['CMD', '/usr/local/bin/openmermaid-healthcheck']
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    logging:
+      driver: local
+      options:
+        max-size: '10m'
+        max-file: '3'

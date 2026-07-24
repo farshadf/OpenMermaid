@@ -1,0 +1,33 @@
+# Production site block for host-installed Caddy.
+#
+# Set OPEN_MERMAID_SITE to the final canonical hostname (for example,
+# openmermaid.app) in the Caddy systemd service environment. It intentionally
+# has no default, so validation fails closed until a hostname is selected.
+# OPEN_MERMAID_UPSTREAM normally stays on host loopback.
+{$OPEN_MERMAID_SITE} {
+	# Caddy is the only public edge and owns dynamic compression. The static
+	# container deliberately serves uncompressed files so Caddy can negotiate
+	# zstd or gzip for each client.
+	encode zstd gzip
+
+	# The inner static server already translates public/_headers, including the
+	# route-specific renderer policy. Add only the production HTTPS policy here;
+	# do not duplicate the build-derived script/style CSP.
+	header Strict-Transport-Security "max-age=31536000"
+
+	reverse_proxy {$OPEN_MERMAID_UPSTREAM:127.0.0.1:8088} {
+		health_uri /healthz
+		health_status 200
+		health_interval 10s
+		health_timeout 2s
+		health_fails 3
+		health_passes 2
+	}
+}
+
+# Add aliases only after the canonical domain is final. Keep this as a separate
+# site block so every alias performs one permanent, path-preserving redirect.
+#
+# www.openmermaid.example, openmermaid.example.net {
+# 	redir https://openmermaid.example{uri} permanent
+# }

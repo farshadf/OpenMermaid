@@ -1,0 +1,63 @@
+name: Bug report
+description: Report a reproducible OpenMermaid problem that is not a private security issue.
+title: '[Bug]: '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. Do not include private diagrams, credentials, personal data, or unpatched vulnerability details.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release, commit, or deployment URL without a sensitive fragment.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - iOS Safari
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+      description: Explain what you expected and what occurred.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Minimal reproduction
+      description: Use synthetic source only. Remove names, secrets, URLs, and private content.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: checks
+    attributes:
+      label: Additional context
+      description: Include viewport, input method, storage mode, console errors, or screenshots when relevant.
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: This report contains no private diagram data, credential, or uncoordinated vulnerability detail.
+          required: true

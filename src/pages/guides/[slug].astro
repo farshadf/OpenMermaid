@@ -1,0 +1,128 @@
+---
+import Breadcrumbs from '../../components/static/Breadcrumbs.astro';
+import SourceBlock from '../../components/static/SourceBlock.astro';
+import StaticDiagramExample from '../../components/static/StaticDiagramExample.astro';
+import TemplateCard from '../../components/static/TemplateCard.astro';
+import { guides, type DiagramGuide } from '../../data/guides';
+import { diagramTemplates } from '../../data/templates';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export function getStaticPaths() {
+  return guides.map((guide) => ({
+    params: { slug: guide.slug },
+    props: { guide },
+  }));
+}
+
+const { guide } = Astro.props as { guide: DiagramGuide };
+const relatedTemplates = guide.relatedTemplates
+  .map((slug) => diagramTemplates.find((template) => template.slug === slug))
+  .filter((template) => template !== undefined);
+const breadcrumbs = [
+  { href: '/', label: 'Home' },
+  { href: '/guides/', label: 'Guides' },
+  { href: `/guides/${guide.slug}/`, label: guide.title },
+] as const;
+const canonicalPath = `/guides/${guide.slug}/`;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: guide.title,
+  description: guide.description,
+  dateModified: guide.updatedAt,
+  datePublished: guide.updatedAt,
+  inLanguage: 'en',
+  isAccessibleForFree: true,
+  url: new URL(canonicalPath, Astro.site).toString(),
+  author: {
+    '@type': 'Organization',
+    name: 'Open Mermaid contributors',
+  },
+};
+---
+
+<BaseLayout
+  title={guide.title}
+  description={guide.description}
+  canonicalPath={canonicalPath}
+  pageType="article"
+  jsonLd={jsonLd}
+  breadcrumbs={breadcrumbs}
+>
+  <div class="shell">
+    <Breadcrumbs items={breadcrumbs} />
+    <header class="page-hero page-hero--compact">
+      <p class="eyebrow">Mermaid guide · {guide.readingMinutes} minute read</p>
+      <h1>{guide.title}</h1>
+      <p class="lede">{guide.description}</p>
+      <p class="muted">Reviewed {guide.updatedAt}</p>
+    </header>
+
+    <article class="guide-article">
+      <section aria-labelledby="worked-example">
+        <h2 id="worked-example">Worked example</h2>
+        <StaticDiagramExample
+          id={`guide-${guide.slug}`}
+          title={guide.title}
+          description={guide.sourceDescription}
+          kind={guide.visualKind}
+          assetPath={`/examples/guides/${guide.slug}.svg`}
+        />
+        <SourceBlock source={guide.source} />
+        <p class="callout">
+          The source-faithful rendering above is generated and sanitized at release time, so this
+          guide ships no Mermaid or editor JavaScript. Open it in the editor for live feedback.
+        </p>
+        <div class="button-row">
+          <a class="button" href="/editor/">Try it in the editor</a>
+          <a class="button-secondary" href="/templates/">Browse templates</a>
+        </div>
+      </section>
+
+      {
+        guide.sections.map((section, index) => (
+          <section aria-labelledby={`${guide.slug}-section-${String(index)}`}>
+            <h2 id={`${guide.slug}-section-${String(index)}`}>{section.heading}</h2>
+            {section.paragraphs.map((paragraph) => (
+              <p>{paragraph}</p>
+            ))}
+            {section.bullets && (
+              <ul>
+                {section.bullets.map((bullet) => (
+                  <li>{bullet}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))
+      }
+
+      <section aria-labelledby="common-errors">
+        <h2 id="common-errors">Common errors to avoid</h2>
+        <ul>{guide.commonErrors.map((error) => <li>{error}</li>)}</ul>
+      </section>
+
+      <section aria-labelledby="related-templates">
+        <h2 id="related-templates">Related templates</h2>
+        <div class="resource-grid">
+          {relatedTemplates.map((template) => <TemplateCard template={template} />)}
+        </div>
+      </section>
+    </article>
+  </div>
+</BaseLayout>
+
+<style>
+  .guide-article {
+    max-inline-size: 52rem;
+    padding-block-end: 3rem;
+  }
+
+  .guide-article > section {
+    padding-block: 0.75rem 1.5rem;
+  }
+
+  .guide-article :global(.resource-grid) {
+    max-inline-size: var(--shell);
+  }
+</style>

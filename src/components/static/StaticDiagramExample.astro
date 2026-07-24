@@ -1,0 +1,160 @@
+---
+interface Props {
+  id: string;
+  title: string;
+  description: string;
+  kind?: 'flow' | 'sequence' | 'chart' | 'structure';
+  assetPath?: string;
+}
+
+const { id, title, description, kind = 'flow', assetPath } = Astro.props;
+const titleId = `${id}-title`;
+const descriptionId = `${id}-description`;
+const arrowId = `${id}-arrow`;
+---
+
+<figure class="static-diagram">
+  {
+    assetPath ? (
+      <img src={assetPath} alt={description} loading="lazy" decoding="async" />
+    ) : (
+      <svg
+        viewBox="0 0 720 320"
+        role="img"
+        aria-labelledby={`${titleId} ${descriptionId}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <title id={titleId}>{title}</title>
+        <desc id={descriptionId}>{description}</desc>
+        {kind === 'sequence' ? (
+          <g class="diagram-sequence">
+            <g class="diagram-node">
+              <rect x="54" y="34" width="152" height="56" rx="14" />
+              <text x="130" y="68" text-anchor="middle">
+                Author
+              </text>
+            </g>
+            <g class="diagram-node">
+              <rect x="284" y="34" width="152" height="56" rx="14" />
+              <text x="360" y="68" text-anchor="middle">
+                Editor
+              </text>
+            </g>
+            <g class="diagram-node">
+              <rect x="514" y="34" width="152" height="56" rx="14" />
+              <text x="590" y="68" text-anchor="middle">
+                Local store
+              </text>
+            </g>
+            <path class="diagram-guide" d="M130 90V286M360 90V286M590 90V286" />
+            <path class="diagram-edge" d="M135 136H350" marker-end={`url(#${arrowId})`} />
+            <text x="242" y="126" text-anchor="middle">
+              request
+            </text>
+            <path
+              class="diagram-edge diagram-edge--reply"
+              d="M585 208H370"
+              marker-end={`url(#${arrowId})`}
+            />
+            <text x="478" y="198" text-anchor="middle">
+              result
+            </text>
+            <path class="diagram-edge" d="M365 172H580" marker-end={`url(#${arrowId})`} />
+          </g>
+        ) : kind === 'chart' ? (
+          <g class="diagram-chart">
+            <path class="diagram-axis" d="M100 48V264H650" />
+            <rect x="148" y="154" width="82" height="110" rx="6" />
+            <rect x="286" y="98" width="82" height="166" rx="6" />
+            <rect x="424" y="128" width="82" height="136" rx="6" />
+            <rect x="562" y="70" width="82" height="194" rx="6" />
+            <text x="189" y="289" text-anchor="middle">
+              Plan
+            </text>
+            <text x="327" y="289" text-anchor="middle">
+              Build
+            </text>
+            <text x="465" y="289" text-anchor="middle">
+              Check
+            </text>
+            <text x="603" y="289" text-anchor="middle">
+              Share
+            </text>
+          </g>
+        ) : kind === 'structure' ? (
+          <g class="diagram-structure">
+            <g class="diagram-node diagram-node--strong">
+              <rect x="260" y="28" width="200" height="62" rx="16" />
+              <text x="360" y="65" text-anchor="middle">
+                Open Mermaid
+              </text>
+            </g>
+            <path
+              class="diagram-edge"
+              d="M360 96V144M360 144H174V178M360 144H546V178"
+              marker-end={`url(#${arrowId})`}
+            />
+            <g class="diagram-node">
+              <rect x="72" y="184" width="204" height="74" rx="14" />
+              <text x="174" y="216" text-anchor="middle">
+                Source
+              </text>
+              <text class="diagram-small" x="174" y="239" text-anchor="middle">
+                plain text
+              </text>
+            </g>
+            <g class="diagram-node">
+              <rect x="444" y="184" width="204" height="74" rx="14" />
+              <text x="546" y="216" text-anchor="middle">
+                Preview
+              </text>
+              <text class="diagram-small" x="546" y="239" text-anchor="middle">
+                safe output
+              </text>
+            </g>
+          </g>
+        ) : (
+          <g class="diagram-flow">
+            <g class="diagram-node">
+              <rect x="42" y="118" width="172" height="76" rx="38" />
+              <text x="128" y="161" text-anchor="middle">
+                Start
+              </text>
+            </g>
+            <path class="diagram-edge" d="M220 156H286" marker-end={`url(#${arrowId})`} />
+            <g class="diagram-node diagram-node--decision">
+              <path d="M360 90L442 156 360 222 278 156Z" />
+              <text x="360" y="161" text-anchor="middle">
+                Check
+              </text>
+            </g>
+            <path class="diagram-edge" d="M448 156H508" marker-end={`url(#${arrowId})`} />
+            <g class="diagram-node diagram-node--strong">
+              <rect x="506" y="118" width="172" height="76" rx="14" />
+              <text x="592" y="161" text-anchor="middle">
+                Result
+              </text>
+            </g>
+            <text class="diagram-small" x="477" y="143" text-anchor="middle">
+              yes
+            </text>
+          </g>
+        )}
+        <defs>
+          <marker
+            id={arrowId}
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path d="M0 0L10 5 0 10Z" />
+          </marker>
+        </defs>
+      </svg>
+    )
+  }
+  <figcaption>{description}</figcaption>
+</figure>

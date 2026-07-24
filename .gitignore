@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+dist/
+.astro/
+.cache/
+coverage/
+playwright-report/
+test-results/
+.lighthouseci/
+reports/*
+!reports/.gitkeep
+C:*
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log

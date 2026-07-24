@@ -1,0 +1,81 @@
+---
+import { EditorApp } from '../features/editor/EditorApp';
+import VitalsBootstrap from '../components/performance/VitalsBootstrap.astro';
+import '../styles/editor.css';
+
+export const prerender = true;
+
+const siteOrigin = Astro.site ?? new URL(Astro.url.origin);
+const canonical = new URL('/editor/', siteOrigin).toString();
+const description =
+  'Create, validate, save, share, and export Mermaid diagrams locally in your browser with Open Mermaid.';
+const socialImage = new URL('/og-default.png', siteOrigin).toString();
+const releaseIndexEnabled = import.meta.env.PUBLIC_INDEX_SITE === 'true';
+const robots = releaseIndexEnabled ? 'index, follow' : 'noindex, nofollow, noarchive';
+const structuredData = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Open Mermaid',
+  url: canonical,
+  description,
+  applicationCategory: 'DeveloperApplication',
+  browserRequirements: 'Requires a current browser with JavaScript and IndexedDB enabled.',
+  operatingSystem: 'Any operating system with a supported web browser',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+}).replaceAll('<', '\\u003c');
+---
+
+<!doctype html>
+<html lang="en" dir="ltr" data-performance-page-kind="editor">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="robots" content={robots} />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f7fb" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17151d" />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Open Mermaid" />
+    <meta property="og:title" content="Mermaid editor | Open Mermaid" />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Open Mermaid — private, fast Mermaid diagrams in your browser"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mermaid editor | Open Mermaid" />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <script is:inline type="application/ld+json" set:html={structuredData} />
+    <title>Mermaid editor | Open Mermaid</title>
+  </head>
+  <body class="editor-page">
+    <a class="sr-only editor-skip-link" href="#document-title">Skip to diagram editor</a>
+    <EditorApp client:load />
+    <noscript>
+      <main class="editor-loading">
+        <div>
+          <h1>JavaScript is required for the editor</h1>
+          <p>
+            Open Mermaid processes diagrams locally in your browser. Enable JavaScript to use the
+            editor, or browse the <a href="/guides/">static guides</a>.
+          </p>
+        </div>
+      </main>
+    </noscript>
+    <VitalsBootstrap />
+  </body>
+</html>

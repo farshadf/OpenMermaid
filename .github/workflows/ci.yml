@@ -1,0 +1,249 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PUBLIC_SITE_URL: https://openmermaid.example
+  PUBLIC_INDEX_SITE: 'false'
+  CI: 'true'
+
+jobs:
+  quality:
+    name: Quality, contracts, and static build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+          run_install: false
+
+      - name: Use Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Validate the public-release configuration gate
+        run: node scripts/validate-release-env.mjs
+        env:
+          PUBLIC_SITE_URL: https://openmermaid.test
+          PUBLIC_INDEX_SITE: 'true'
+
+      - name: Run unit, contract, security corpus, and coverage gates
+        run: pnpm test:coverage
+
+      - name: Build portable static artifact
+        run: pnpm build
+
+      - name: Install Chrome for Lighthouse
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+
+      - name: Run static and interactive Lighthouse gates
+        run: pnpm lighthouse
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+
+      - name: Upload Lighthouse lab reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-${{ github.sha }}
+          path: |
+            reports/lighthouse-static/
+            reports/lighthouse-editor/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Check links, metadata, indexing, chunks, and bundle budgets
+        run: pnpm test:metadata
+
+      - name: Check standalone independence contract
+        run: env -u OPENAI_API_KEY -u CHATGPT_APP_ID -u MCP_SERVER_URL pnpm test:independence
+
+      - name: Check dependency licenses
+        run: pnpm test:licenses
+
+      - name: Upload complete dependency license report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-licenses-${{ github.sha }}
+          path: reports/dependency-licenses.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+
+      - name: Upload static artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openmermaid-dist-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  browser:
+    name: Browser E2E (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium
+            engine: chromium
+          - project: firefox
+            engine: firefox
+          - project: webkit
+            engine: webkit
+          - project: mobile-webkit
+            engine: webkit
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+          run_install: false
+
+      - name: Use Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps ${{ matrix.engine }}
+
+      - name: Build portable static artifact
+        run: pnpm build
+
+      - name: Run browser suite
+        run: pnpm exec playwright test --project=${{ matrix.project }}
+
+      - name: Upload browser report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ matrix.project }}-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  deployment:
+    name: Docker and Caddy deployment contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+          run_install: false
+
+      - name: Use Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build portable static artifact
+        run: pnpm build
+
+      - name: Install deployment-smoke browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify hardened image, Caddy edge, and deployed browser
+        run: pnpm test:deployment:browser
+
+      - name: Build release image for container inventory
+        run: docker build --tag open-mermaid:ci .
+
+      - name: Generate container CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: open-mermaid:ci
+          format: cyclonedx-json
+          output-file: reports/container-sbom.cdx.json
+          artifact-name: open-mermaid-container-${{ github.sha }}.cdx.json
+          upload-release-assets: false
+
+  sbom:
+    name: Software bill of materials
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+          run_install: false
+
+      - name: Use Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate and schema-validate CycloneDX SBOM
+        run: pnpm sbom
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: reports/sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 90

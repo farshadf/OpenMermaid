@@ -1,0 +1,135 @@
+---
+import Breadcrumbs from '../components/static/Breadcrumbs.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const breadcrumbs = [
+  { href: '/', label: 'Home' },
+  { href: '/privacy/', label: 'Privacy' },
+] as const;
+---
+
+<BaseLayout
+  title="Privacy"
+  description="How the standalone Open Mermaid browser application stores, processes, shares, and exports diagram data."
+  canonicalPath="/privacy/"
+  breadcrumbs={breadcrumbs}
+>
+  <div class="shell">
+    <Breadcrumbs items={breadcrumbs} />
+    <header class="page-hero page-hero--compact measure">
+      <p class="eyebrow">Version 1 privacy notice</p>
+      <h1>Privacy</h1>
+      <p class="lede">
+        Diagram content stays on this device unless you explicitly share or export it.
+      </p>
+      <p class="muted">Last updated: 2026-07-22</p>
+    </header>
+
+    <article class="measure policy-copy">
+      <section>
+        <h2>Plain-language summary</h2>
+        <p>
+          The standalone Open Mermaid application is delivered as static site files. It has no
+          account system and no application server that receives your diagram source. It does not
+          include a network analytics service, session replay, AI services, or ChatGPT connectivity
+          in version 1.
+        </p>
+      </section>
+      <section>
+        <h2>Data stored in your browser</h2>
+        <p>
+          Open Mermaid uses IndexedDB to keep named documents, Mermaid source, appearance choices,
+          revisions, and timestamps on the current browser profile. A single pending active draft
+          may also be mirrored briefly in same-origin browser storage so closing a page cannot
+          discard an edit before its asynchronous IndexedDB write starts. That recovery record is
+          removed after the matching save. Theme and interface preferences may use browser storage.
+          This data is governed by the device, browser profile, private-browsing rules, storage
+          limits, and any device backup policy you use.
+        </p>
+        <p>
+          You can delete individual documents or explicitly clear Open Mermaid’s local data.
+          Clearing browser site data, using automated cleanup, or losing the browser profile can
+          also remove it. Export important source to a file you control.
+        </p>
+      </section>
+      <section>
+        <h2>Optional local performance history</h2>
+        <p>
+          The performance page measures supported Web Vitals for the current visit in your browser.
+          Those readings are ephemeral unless you explicitly enable 30-day local history. When
+          enabled, a separate bounded IndexedDB database stores only a metric ID, metric name,
+          numeric value and rating, fixed page category, navigation type, small-or-large viewport
+          class, timestamp, and schema version.
+        </p>
+        <p>
+          Local performance records do not contain diagram source or titles, raw paths, queries,
+          fragments, referrers, user-agent strings, DOM nodes, selectors, resource URLs, or
+          performance-entry objects. They are not transmitted. You can clear this history on the
+          performance page or with the editor’s clear-local-data action.
+        </p>
+      </section>
+      <section>
+        <h2>Network requests</h2>
+        <p>
+          The browser requests the HTML, CSS, JavaScript, and other static assets needed to load the
+          site. The hosting provider can receive ordinary request information such as IP address,
+          user agent, requested path, time, and security logs under its own policy. Open Mermaid v1
+          makes no network analytics, outbound telemetry, remote-font, or runtime CDN request. The
+          optional production CrUX report runs in project automation and does not add a browser
+          request.
+        </p>
+      </section>
+      <section>
+        <h2>Sharing with a fragment link</h2>
+        <p>
+          When you explicitly create a snapshot link, Open Mermaid compresses selected diagram data
+          into the URL fragment after #. Browsers normally omit the fragment from the HTTP request.
+          The fragment is not encrypted: recipients, browser history, clipboard tools, extensions,
+          screenshots, screen sharing, and applications where you paste it may see the content.
+        </p>
+        <p>
+          Snapshot links are immutable copies. Editing or deleting the local document does not
+          revoke a link already sent to someone. Do not include secrets, credentials, regulated
+          data, or confidential information unless your policies explicitly allow the sharing
+          channel.
+        </p>
+      </section>
+      <section>
+        <h2>Exports, imports, and clipboard actions</h2>
+        <p>
+          Import reads the file you select in the browser. Export creates a source, SVG, or PNG file
+          on your device. Copy actions place selected source or sanitized SVG on the system
+          clipboard. After an explicit export, copy, upload, paste, or share action, the
+          destination’s privacy and retention rules apply.
+        </p>
+      </section>
+      <section>
+        <h2>Future optional modes</h2>
+        <p>
+          ChatGPT, AI, cloud sync, and collaboration are not part of this standalone notice. If
+          introduced as separately deployed optional capabilities, each must explain which
+          user-selected content leaves the device, which service receives it, why, and how long it
+          is retained before the user connects it.
+        </p>
+      </section>
+      <section>
+        <h2>Questions</h2>
+        <p>
+          A contact channel for privacy questions will be published here before production launch.
+          Do not send private diagram content, credentials, vulnerability details, or other
+          sensitive data through public channels.
+        </p>
+      </section>
+    </article>
+  </div>
+</BaseLayout>
+
+<style>
+  .policy-copy {
+    padding-block-end: 3rem;
+  }
+
+  .policy-copy section {
+    padding-block: 0.4rem 1rem;
+  }
+</style>

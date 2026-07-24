@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /renderer/
+
+# Submit the generated sitemap-index.xml for the final PUBLIC_SITE_URL in the
+# search console. Preview builds emit noindex metadata and must also set an
+# X-Robots-Tag header at the hosting layer.

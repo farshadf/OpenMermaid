@@ -1,0 +1,49 @@
+---
+import StaticDiagramExample from '../components/static/StaticDiagramExample.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Page not found"
+  description="The requested Open Mermaid page could not be found."
+  canonicalPath="/404/"
+  noindex={true}
+>
+  <section class="page-hero">
+    <div class="shell not-found-grid">
+      <div>
+        <p class="eyebrow">404 · Page not found</p>
+        <h1>This path does not lead to a diagram.</h1>
+        <p class="lede">
+          The address may be incomplete or the page may have moved. A URL fragment share also needs
+          the complete text after the # character.
+        </p>
+        <div class="button-row">
+          <a class="button" href="/">Return home</a>
+          <a class="button-secondary" href="/editor/">Open the editor</a>
+        </div>
+      </div>
+      <StaticDiagramExample
+        id="not-found"
+        title="A route with no destination"
+        description="The requested route reaches a check but no matching page."
+        kind="flow"
+      />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .not-found-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
+    gap: 3rem;
+    align-items: center;
+  }
+
+  @media (max-width: 48rem) {
+    .not-found-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

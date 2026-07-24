@@ -1,0 +1,5 @@
+export const SHARE_FRAGMENT_PREFIX = '#v1:';
+export const MAX_SHARE_HASH_LENGTH = 32_768;
+export const MAX_SHARE_URL_LENGTH = 32_768;
+export const MAX_SHARE_COMPRESSED_BYTES = 24 * 1_024;
+export const MAX_SHARE_DECOMPRESSED_BYTES = 384 * 1_024;

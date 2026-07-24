@@ -1,0 +1,125 @@
+---
+import Breadcrumbs from '../components/static/Breadcrumbs.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const breadcrumbs = [
+  { href: '/', label: 'Home' },
+  { href: '/security/', label: 'Security' },
+] as const;
+---
+
+<BaseLayout
+  title="Application security"
+  description="Open Mermaid security boundaries for local storage, sandboxed Mermaid rendering, sanitized export, fragment sharing, and static deployment."
+  canonicalPath="/security/"
+  breadcrumbs={breadcrumbs}
+>
+  <div class="shell">
+    <Breadcrumbs items={breadcrumbs} />
+    <header class="page-hero page-hero--compact measure">
+      <p class="eyebrow">Boundaries before features</p>
+      <h1>Application security</h1>
+      <p class="lede">
+        Untrusted diagram source is isolated from the application, sanitized before export, and
+        never required by a backend.
+      </p>
+    </header>
+
+    <div class="policy-grid">
+      <article class="policy-card">
+        <h2>Sandboxed rendering</h2>
+        <p>
+          Mermaid loads only in an application-owned preview iframe with <code
+            >sandbox="allow-scripts"</code
+          >. The parent sends validated, revisioned messages and does not insert renderer SVG into
+          its own DOM.
+        </p>
+      </article>
+      <article class="policy-card">
+        <h2>Strict Mermaid configuration</h2>
+        <p>
+          The pinned renderer uses a fixed strict security level, bounded source and edge limits, no
+          automatic page loading, and suppressed built-in error insertion. User source cannot relax
+          secure configuration keys.
+        </p>
+      </article>
+      <article class="policy-card">
+        <h2>Sanitized output</h2>
+        <p>
+          SVG passes an SVG-focused sanitizer and explicit checks for scripts, event handlers,
+          executable URLs, external resources, CSS imports and URLs, and unsafe foreign content.
+          Only sanitized output is copied or exported.
+        </p>
+      </article>
+      <article class="policy-card">
+        <h2>Bounded work</h2>
+        <p>
+          Rendering is serialized, stale results are discarded, the last valid preview survives
+          syntax errors, and a bounded timeout resets a stuck renderer. Share payloads have
+          compressed and decompressed size limits.
+        </p>
+      </article>
+      <article class="policy-card">
+        <h2>Local storage conflicts</h2>
+        <p>
+          Versioned documents and revision checks help surface another-tab edits instead of silently
+          overwriting them. Storage failures are recoverable, and users can explicitly clear local
+          data.
+        </p>
+      </article>
+      <article class="policy-card">
+        <h2>Restrictive hosting policy</h2>
+        <p>
+          The portable distribution includes security-header examples for static hosts. HTTPS,
+          content security policy, MIME protection, referrer policy, permissions policy, and
+          rollback remain deployment requirements.
+        </p>
+      </article>
+    </div>
+
+    <section class="content-section measure" aria-labelledby="threats-heading">
+      <h2 id="threats-heading">Threats considered in version 1</h2>
+      <ul>
+        <li>
+          Script, event-handler, executable-link, remote-resource, CSS, and foreignObject injection
+          in SVG.
+        </li>
+        <li>
+          Mermaid click directives, hostile frontmatter, parser failures, excessive input, and
+          render hangs.
+        </li>
+        <li>
+          Stale renderer messages, replayed revisions, unexpected origins, and invalid message
+          shapes.
+        </li>
+        <li>Malformed or future share payloads, Unicode edge cases, and decompression bombs.</li>
+        <li>Local storage denial, quota failure, and edits from multiple browser tabs.</li>
+        <li>
+          Accidental disclosure through exports, clipboard operations, and unencrypted fragment
+          links.
+        </li>
+      </ul>
+    </section>
+
+    <section class="content-section measure" aria-labelledby="report-heading">
+      <h2 id="report-heading">Vulnerability reporting</h2>
+      <p>
+        A private reporting channel and supported-version details will be published here before
+        production launch. Until then, do not send exploit details, credentials, diagram content, or
+        other sensitive data through public channels.
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .policy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: 1rem;
+  }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+</style>

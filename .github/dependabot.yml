@@ -1,0 +1,47 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/Los_Angeles
+    open-pull-requests-limit: 8
+    versioning-strategy: increase
+    labels:
+      - dependencies
+    groups:
+      astro:
+        patterns:
+          - astro
+          - '@astrojs/*'
+      codemirror:
+        patterns:
+          - '@codemirror/*'
+      testing:
+        dependency-type: development
+        patterns:
+          - '@playwright/*'
+          - '@testing-library/*'
+          - '@vitest/*'
+          - vitest
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - dependencies
+      - ci
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/Los_Angeles
+    labels:
+      - dependencies
+      - deployment

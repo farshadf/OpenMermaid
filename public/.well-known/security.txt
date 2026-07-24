@@ -1,0 +1,4 @@
+Contact: https://github.com/farshadf/OpenMermaid/security/advisories/new
+Expires: 2027-07-20T23:59:59Z
+Preferred-Languages: en
+Policy: https://github.com/farshadf/OpenMermaid/blob/main/SECURITY.md

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Open Mermaid</title>
+  <rect width="64" height="64" rx="8" fill="#00052e" />
+  <circle cx="52" cy="12" r="4" fill="#34fcff" />
+  <path d="M11 47V17l10 15 11-15 11 15 10-15v30" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

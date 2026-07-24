@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Open Mermaid</title>
+  <desc id="description">Private, fast Mermaid diagrams in your browser</desc>
+  <defs>
+    <radialGradient id="background" cx="78%" cy="36%" r="68%">
+      <stop stop-color="#06105a" />
+      <stop offset="1" stop-color="#00052e" />
+    </radialGradient>
+    <pattern id="signal-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.3" fill="#34fcff" opacity=".24" />
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#background)" />
+  <rect width="1200" height="630" fill="url(#signal-grid)" />
+  <circle cx="1035" cy="82" r="245" fill="#34fcff" opacity=".06" />
+  <circle cx="85" cy="590" r="210" fill="#1742d1" opacity=".16" />
+  <g transform="translate(86 90)">
+    <rect width="96" height="96" rx="8" fill="#1742d1" />
+    <path d="M18 73V25l15 24 16-24 16 24 15-24v48" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+  <text x="86" y="280" fill="#ffffff" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="82" font-weight="400" letter-spacing="-3">Open Mermaid</text>
+  <text x="90" y="360" fill="#c8cbe2" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="38">Private, fast Mermaid diagrams</text>
+  <text x="90" y="410" fill="#c8cbe2" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="38">in your browser.</text>
+  <g transform="translate(720 230)">
+    <rect x="0" y="0" width="150" height="72" rx="8" fill="#ffffff" stroke="#dbdcdf" stroke-width="3" />
+    <rect x="300" y="0" width="150" height="72" rx="8" fill="#e8ecff" stroke="#1742d1" stroke-width="3" />
+    <path d="M158 36h130" fill="none" stroke="#34fcff" stroke-width="5" stroke-linecap="round" />
+    <path d="m278 25 14 11-14 11" fill="none" stroke="#34fcff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="75" y="45" text-anchor="middle" fill="#00052e" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="23" font-weight="700">Source</text>
+    <text x="375" y="45" text-anchor="middle" fill="#00052e" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="23" font-weight="700">Diagram</text>
+  </g>
+</svg>

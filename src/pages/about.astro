@@ -1,0 +1,94 @@
+---
+import Breadcrumbs from '../components/static/Breadcrumbs.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const breadcrumbs = [
+  { href: '/', label: 'Home' },
+  { href: '/about/', label: 'About' },
+] as const;
+---
+
+<BaseLayout
+  title="About Open Mermaid"
+  description="Open Mermaid is a standalone, local-first browser workspace for creating Mermaid diagrams without an account or backend."
+  canonicalPath="/about/"
+  breadcrumbs={breadcrumbs}
+>
+  <div class="shell">
+    <Breadcrumbs items={breadcrumbs} />
+    <header class="page-hero page-hero--compact measure">
+      <p class="eyebrow">Independent and standalone</p>
+      <h1>About Open Mermaid</h1>
+      <p class="lede">
+        A focused Mermaid workspace that stays useful even when every optional platform connection
+        is absent.
+      </p>
+    </header>
+
+    <div class="article-layout">
+      <article class="article-content">
+        <section>
+          <h2>Why it exists</h2>
+          <p>
+            Text-based diagrams are portable, reviewable, and easy to keep with the work they
+            explain. Open Mermaid gives that source a modern browser workspace without turning basic
+            editing into a hosted service. It is designed for beginners who want guided starts and
+            developers who want direct control of valid Mermaid syntax.
+          </p>
+        </section>
+        <section>
+          <h2>What standalone means</h2>
+          <p>
+            Version 1 is a static application. It needs a network connection to load its site
+            assets, then processes diagrams and keeps its document library locally in the browser.
+            There is no account system, application backend, analytics collector, AI API, ChatGPT
+            dependency, service worker, or runtime content-delivery network.
+          </p>
+          <p>
+            A future ChatGPT App, AI generator, cloud sync service, or collaboration service may
+            consume the same validated document contract. Those capabilities must remain separately
+            deployed and optional; the core web application cannot depend on them.
+          </p>
+        </section>
+        <section>
+          <h2>Available without a paid key</h2>
+          <p>
+            The standalone editor requires no account or paid API key. Its core editing, rendering,
+            local-library, sharing, and export workflows run directly in the browser without a
+            separately hosted application service.
+          </p>
+        </section>
+        <section>
+          <h2>A measured roadmap</h2>
+          <p>
+            Version 1 focuses on local authoring, sharing, and export. Accounts, cloud sync,
+            collaboration, AI, PDF and JPEG export, and offline support can be evaluated separately
+            without weakening the privacy promise, performance budget, or security boundary. Future
+            work must earn its place with a clear user benefit and explicit data-flow disclosure.
+          </p>
+        </section>
+        <section>
+          <h2>Name and affiliation</h2>
+          <p>
+            Open Mermaid is an independent project. It is not affiliated with, endorsed by, or
+            sponsored by the Mermaid project or OpenAI. Project maintainers must complete name,
+            domain, and trademark clearance before a public launch; this website does not claim that
+            clearance has occurred.
+          </p>
+        </section>
+      </article>
+      <aside class="article-aside">
+        <h2>Project principles</h2>
+        <ul>
+          <li>Standalone first</li>
+          <li>Local processing by default</li>
+          <li>Accessible authoring guidance</li>
+          <li>Strict security boundaries</li>
+          <li>Portable static deployment</li>
+          <li>Truthful discoverability</li>
+        </ul>
+        <p><a href="/editor/">Open the editor</a></p>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>

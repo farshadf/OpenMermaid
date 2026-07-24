@@ -1,0 +1,90 @@
+---
+import Breadcrumbs from '../components/static/Breadcrumbs.astro';
+import PerformanceDiagnostics from '../components/performance/PerformanceDiagnostics.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const breadcrumbs = [
+  { href: '/', label: 'Home' },
+  { href: '/performance/', label: 'Performance' },
+] as const;
+---
+
+<BaseLayout
+  title="Performance and Web Vitals"
+  description="Measure Open Mermaid Web Vitals locally, understand the privacy boundary, and review the lab and production field-performance system."
+  canonicalPath="/performance/"
+  breadcrumbs={breadcrumbs}
+>
+  <div class="shell">
+    <Breadcrumbs items={breadcrumbs} />
+    <header class="page-hero page-hero--compact measure">
+      <p class="eyebrow">Measured, not assumed</p>
+      <h1>Performance and Web Vitals</h1>
+      <p class="lede">
+        Open Mermaid combines repeatable Lighthouse gates, optional on-device diagnostics, and
+        production Chrome UX Report trends—without installing a network analytics service.
+      </p>
+    </header>
+
+    <div class="performance-stack">
+      <PerformanceDiagnostics />
+
+      <section class="performance-copy" aria-labelledby="three-layers-heading">
+        <p class="eyebrow">Measurement design</p>
+        <h2 id="three-layers-heading">Three layers, three different questions</h2>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <h3>Lab regression gates</h3>
+            <p>
+              Lighthouse CI runs repeated controlled tests on static routes and the editor. It
+              catches build-to-build regressions before deployment, but cannot measure INP without
+              real interactions.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Local diagnostics</h3>
+            <p>
+              The official Web Vitals library measures this visit. History is off by default and,
+              when enabled, stores only bounded metric records—not URLs, fragments, source, titles,
+              DOM entries, referrers, or user-agent strings.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Production field health</h3>
+            <p>
+              After one canonical origin receives enough eligible traffic, Chrome UX Report data
+              supplies origin and page-level 28-day field distributions. Missing early data is
+              informational, not a failed release.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="performance-copy measure" aria-labelledby="targets-heading">
+        <p class="eyebrow">Current objectives</p>
+        <h2 id="targets-heading">Pass at the 75th percentile</h2>
+        <p>
+          The production objectives are LCP at or below 2.5 seconds, INP at or below 200
+          milliseconds, and CLS at or below 0.1 at the 75th percentile, reviewed separately for
+          mobile and desktop. Lab targets remain stricter where Lighthouse can measure them.
+        </p>
+        <p>
+          Local samples below twenty observations remain visible but are labeled directional. They
+          are never presented as site-wide field data.
+        </p>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .performance-stack {
+    display: grid;
+    gap: clamp(2.5rem, 7vw, 5rem);
+    padding-block-end: 4rem;
+  }
+
+  .performance-copy {
+    padding-block: 0.5rem;
+  }
+</style>

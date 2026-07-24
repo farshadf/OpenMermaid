@@ -1,0 +1,43 @@
+# Open Mermaid
+
+> Open Mermaid is a standalone, local-first browser workspace for creating, validating, organizing, sharing, and exporting Mermaid diagrams. It requires no account, application backend, API key, network analytics service, OpenAI or ChatGPT connection, or runtime CDN.
+
+This file is a supplemental machine-readable index. It does not replace semantic HTML, canonical metadata, robots policy, or a sitemap, and its presence makes no ranking promise.
+
+## Product
+
+- [Open Mermaid home](/): Product summary, privacy promise, and independence contract.
+- [Performance and Web Vitals](/performance/): Local-only diagnostics and the lab/field measurement model.
+- [Editor](/editor/): Local multi-document Mermaid editor and sandboxed live preview.
+- [About](/about/): Scope, principles, deferred features, and non-affiliation notice.
+- [Privacy](/privacy/): Local storage, fragment sharing, export, and network-request disclosure.
+- [Security](/security/): Renderer isolation, sanitization, bounded work, and reporting guidance.
+
+## Templates
+
+- [All templates](/templates/): Searchable index covering the diagram families in the pinned Mermaid release.
+- [Flowchart starter](/templates/flowchart-starter/): Process and decision source.
+- [Sequence diagram starter](/templates/sequence-starter/): Ordered messages and responses.
+- [Entity relationship starter](/templates/er-starter/): Entities and cardinality.
+- [Gantt starter](/templates/gantt-starter/): Scheduled work and dependencies.
+- [Architecture starter](/templates/architecture-starter/): Standalone browser boundary.
+
+## Guides
+
+- [All guides](/guides/): Guide index.
+- [Mermaid basics](/guides/mermaid-basics/): Text-to-diagram fundamentals.
+- [Flowcharts](/guides/flowcharts/): Direction, shapes, branches, and complexity.
+- [Sequence diagrams](/guides/sequence-diagrams/): Participants, messages, and control blocks.
+- [Choosing a diagram](/guides/choosing-a-diagram/): Match grammar to the reader's question.
+- [Accessible diagrams](/guides/accessible-diagrams/): Source, descriptions, visual review, and publishing context.
+- [Privacy-first sharing](/guides/privacy-first-sharing/): What fragment links expose.
+- [Exporting diagrams](/guides/exporting-diagrams/): SVG and PNG tradeoffs.
+
+## Important constraints
+
+- Diagram content stays on the device unless the user explicitly shares, copies, imports, or exports it.
+- Fragment links are compressed but not encrypted.
+- The standalone application is independent of ChatGPT, MCP, OpenAI, and AI-provider APIs.
+- Open Mermaid does not claim arbitrary user-authored diagrams are automatically accessible.
+- Upstream beta and experimental Mermaid grammars are labeled and can change between pinned versions.
+- Open Mermaid is independent and is not affiliated with the Mermaid project or OpenAI.

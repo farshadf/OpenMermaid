@@ -1,0 +1,120 @@
+---
+import Breadcrumbs from '../../components/static/Breadcrumbs.astro';
+import TemplateCard from '../../components/static/TemplateCard.astro';
+import { diagramTemplates, stableTemplates } from '../../data/templates';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const breadcrumbs = [
+  { href: '/', label: 'Home' },
+  { href: '/templates/', label: 'Templates' },
+] as const;
+---
+
+<BaseLayout
+  title="Mermaid diagram templates"
+  description="Start with maintained Mermaid templates for flowcharts, sequence diagrams, class models, charts, architecture, and every diagram family in the pinned release."
+  canonicalPath="/templates/"
+  breadcrumbs={breadcrumbs}
+>
+  <div class="shell">
+    <Breadcrumbs items={breadcrumbs} />
+    <header class="page-hero page-hero--compact">
+      <p class="eyebrow">Maintained source, not screenshots</p>
+      <h1>Mermaid diagram templates</h1>
+      <p class="lede">
+        Choose a working starter, understand when to use it, and open the source in the local
+        editor. Upstream beta and experimental grammars are clearly labeled.
+      </p>
+      <p class="filter-note">
+        {stableTemplates.length} stable starters and recipes plus {
+          diagramTemplates.length - stableTemplates.length
+        } labeled early-maturity starters cover the diagram families documented by the pinned Mermaid
+        release.
+      </p>
+    </header>
+
+    <form class="template-search" role="search" data-template-search>
+      <label for="template-query">Search templates</label>
+      <input
+        id="template-query"
+        name="q"
+        type="search"
+        inputmode="search"
+        autocomplete="off"
+        placeholder="Try flowchart, API, database…"
+        aria-describedby="template-results"
+      />
+      <p id="template-results" class="muted" aria-live="polite">
+        Showing all {diagramTemplates.length} templates.
+      </p>
+    </form>
+
+    <div class="resource-grid" data-template-grid>
+      {
+        diagramTemplates.map((template) => (
+          <div
+            data-template-card
+            data-search={`${template.name} ${template.diagramType} ${template.summary} ${template.keywords.join(' ')}`.toLocaleLowerCase()}
+          >
+            <TemplateCard template={template} />
+          </div>
+        ))
+      }
+    </div>
+
+    <p class="no-results" data-no-results hidden>
+      No template matches that search. Try a diagram family or task such as “sequence”, “database”,
+      or “planning”.
+    </p>
+
+    <noscript>
+      <p class="callout">
+        Search needs JavaScript, but every template remains available in the list above.
+      </p>
+    </noscript>
+  </div>
+</BaseLayout>
+
+<script is:inline type="module" src="/scripts/template-search.js"></script>
+
+<style>
+  .template-search {
+    max-inline-size: 38rem;
+    margin-block-end: 2rem;
+  }
+
+  .template-search label {
+    display: block;
+    margin-block-end: 0.4rem;
+    font-weight: 740;
+  }
+
+  .template-search input {
+    inline-size: 100%;
+    min-block-size: 3rem;
+    padding: 0.7rem 0.9rem;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font: inherit;
+  }
+
+  .template-search p {
+    margin-block-start: 0.4rem;
+  }
+
+  [data-template-card] {
+    display: contents;
+  }
+
+  [data-template-card][hidden] {
+    display: none;
+  }
+
+  .no-results {
+    padding: 1.25rem;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+  }
+</style>

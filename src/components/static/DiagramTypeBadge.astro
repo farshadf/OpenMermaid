@@ -1,0 +1,13 @@
+---
+import type { DiagramMaturity } from '../../data/templates';
+
+interface Props {
+  maturity: DiagramMaturity;
+}
+
+const { maturity } = Astro.props;
+---
+
+<span class:list={['maturity-badge', `maturity-badge--${maturity}`]}>
+  {maturity === 'stable' ? 'Stable' : `Upstream ${maturity}`}
+</span>

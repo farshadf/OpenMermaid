@@ -1,0 +1,13 @@
+---
+interface Props {
+  source: string;
+  label?: string;
+}
+
+const { source, label = 'Mermaid source' } = Astro.props;
+---
+
+<figure class="source-block">
+  <figcaption>{label}</figcaption>
+  <pre tabindex="0"><code>{source}</code></pre>
+</figure>

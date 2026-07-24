@@ -1,0 +1,279 @@
+---
+import AdSlot from '../components/static/AdSlot.astro';
+import StaticDiagramExample from '../components/static/StaticDiagramExample.astro';
+import TemplateCard from '../components/static/TemplateCard.astro';
+import { english } from '../content/en';
+import { guides } from '../data/guides';
+import { diagramTemplates } from '../data/templates';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const featuredTemplates = diagramTemplates.filter((template) =>
+  ['flowchart-starter', 'sequence-starter', 'er-starter'].includes(template.slug),
+);
+const featuredGuides = guides.slice(0, 3);
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Open Mermaid',
+    url: new URL('/', Astro.site).toString(),
+    description: english.siteDescription,
+    inLanguage: 'en',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Open Mermaid',
+    url: new URL('/editor/', Astro.site).toString(),
+    description: english.siteDescription,
+    applicationCategory: 'DeveloperApplication',
+    applicationSubCategory: 'Diagram editor',
+    browserRequirements: 'Requires a current browser with JavaScript and IndexedDB enabled.',
+    operatingSystem: 'Any operating system with a supported web browser',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+    },
+    featureList: [
+      'Local multi-document Mermaid workspace',
+      'Live sandboxed preview',
+      'SVG and PNG export',
+      'Immutable fragment-link sharing',
+      'No account or API key required',
+    ],
+  },
+];
+---
+
+<BaseLayout jsonLd={jsonLd}>
+  <section class="page-hero page-hero--home">
+    <div class="shell hero-grid">
+      <div>
+        <p class="eyebrow">A local-first Mermaid workspace</p>
+        <h1>Diagrams from text, without giving up your data.</h1>
+        <p class="lede">
+          Create, validate, organize, share, and export Mermaid diagrams in a fast browser
+          workspace. No account, backend, network analytics, API key, or runtime CDN.
+        </p>
+        <div class="button-row">
+          <a class="button" href="/editor/">{english.actions.openEditor}</a>
+          <a class="button-secondary" href="/templates/">{english.actions.browseTemplates}</a>
+        </div>
+        <p class="privacy-line">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z"></path>
+          </svg>
+          {english.privacyPromise}
+        </p>
+      </div>
+      <StaticDiagramExample
+        id="home-workflow"
+        title="A private diagram workflow"
+        description="Write source, check the preview, then export or explicitly share."
+        kind="flow"
+      />
+    </div>
+  </section>
+
+  <section class="content-section content-section--tinted" aria-labelledby="why-heading">
+    <div class="shell">
+      <p class="eyebrow">Straightforward by design</p>
+      <h2 id="why-heading">Everything the editor needs. Nothing watching over it.</h2>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <h3>Runs on its own</h3>
+          <p>
+            The standalone application has no server dependency. Static files load the workspace;
+            your browser renders and stores diagrams locally.
+          </p>
+        </article>
+        <article class="feature-card">
+          <h3>Built for real Mermaid source</h3>
+          <p>
+            Use the full pinned Mermaid release, a focused text editor, guided templates,
+            validation, and a last known-good preview when source is temporarily invalid.
+          </p>
+        </article>
+        <article class="feature-card">
+          <h3>Safe, deliberate output</h3>
+          <p>
+            Preview rendering is isolated from the application. SVG is sanitized before copy or
+            export, while PNG offers explicit scale and background choices.
+          </p>
+        </article>
+        <article class="feature-card">
+          <h3>Friendly at any width</h3>
+          <p>
+            A resizable source-and-preview layout becomes accessible tabs on narrow screens, with
+            touch and keyboard controls and no remote font cost.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <AdSlot placement="content-rail" />
+
+  <section class="content-section" aria-labelledby="templates-heading">
+    <div class="shell">
+      <p class="eyebrow">Start with working source</p>
+      <h2 id="templates-heading">Templates for common explanations</h2>
+      <p class="lede">
+        Each template includes visible Mermaid source, an accessible static example, practical
+        context, and common mistakes to avoid.
+      </p>
+      <div class="resource-grid">
+        {featuredTemplates.map((template) => <TemplateCard template={template} />)}
+      </div>
+      <div class="button-row">
+        <a class="button-secondary" href="/templates/">Browse all diagram templates</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="content-section content-section--tinted" aria-labelledby="learn-heading">
+    <div class="shell">
+      <p class="eyebrow">Learn the grammar, explain the idea</p>
+      <h2 id="learn-heading">Practical Mermaid guides</h2>
+      <div class="guide-grid">
+        {
+          featuredGuides.map((guide) => (
+            <article class="resource-card">
+              <div class="resource-card__meta">
+                <span>Guide</span>
+                <span>{guide.readingMinutes} min read</span>
+              </div>
+              <h3>
+                <a href={`/guides/${guide.slug}/`}>{guide.title}</a>
+              </h3>
+              <p>{guide.description}</p>
+              <a class="text-link" href={`/guides/${guide.slug}/`}>
+                Read guide <span aria-hidden="true">→</span>
+              </a>
+            </article>
+          ))
+        }
+      </div>
+      <div class="button-row">
+        <a class="button-secondary" href="/guides/">Read all guides</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="content-section" aria-labelledby="independent-heading">
+    <div class="shell independence-panel">
+      <div>
+        <p class="eyebrow">The independence contract</p>
+        <h2 id="independent-heading">Useful without a platform connection</h2>
+        <p>
+          Open Mermaid v1 does not import ChatGPT, MCP, OpenAI, or AI-provider packages. It does not
+          read their configuration. A future ChatGPT App or funded AI adapter must remain a
+          separately deployed client of the shared document contract; the standalone editor never
+          depends on it.
+        </p>
+      </div>
+      <ul class="status-list">
+        <li>No account or cloud sync</li>
+        <li>No network analytics or session replay</li>
+        <li>Local multi-document library</li>
+        <li>No service worker or offline claim</li>
+        <li>No API key required</li>
+      </ul>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-hero--home {
+    position: relative;
+    overflow: hidden;
+    border-block-end: 1px solid rgb(175 180 219 / 24%);
+    background:
+      radial-gradient(circle at 72% 48%, rgb(52 252 255 / 14%), transparent 6rem),
+      radial-gradient(circle at 72% 48%, #06105a 0, #00052e 31rem);
+    color: #ffffff;
+  }
+
+  .page-hero--home::before {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgb(52 252 255 / 32%) 1px, transparent 1px);
+    background-position: 72% 50%;
+    background-size: 24px 24px;
+    content: '';
+    mask-image: radial-gradient(circle at 72% 50%, black, transparent 25rem);
+    pointer-events: none;
+  }
+
+  .hero-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(19rem, 0.95fr);
+    gap: clamp(2rem, 6vw, 5rem);
+    align-items: center;
+  }
+
+  .hero-grid :global(.static-diagram) {
+    margin: 0;
+  }
+
+  .page-hero--home :global(.eyebrow) {
+    color: #afb4db;
+  }
+
+  .page-hero--home :global(.lede),
+  .page-hero--home .privacy-line {
+    color: #c8cbe2;
+  }
+
+  .page-hero--home :global(.button-secondary) {
+    border-color: #afb4db;
+    background: transparent;
+    color: #ffffff;
+  }
+
+  .page-hero--home :global(.static-diagram img),
+  .page-hero--home :global(.static-diagram svg) {
+    border-color: rgb(175 180 219 / 44%);
+    background: #ffffff;
+  }
+
+  .privacy-line {
+    display: flex;
+    max-inline-size: 42rem;
+    align-items: flex-start;
+    gap: 0.6rem;
+    color: var(--color-muted);
+    font-size: 0.92rem;
+  }
+
+  .privacy-line svg {
+    flex: 0 0 auto;
+    fill: none;
+    stroke: #34fcff;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+  }
+
+  .independence-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(15rem, 0.75fr);
+    gap: clamp(2rem, 7vw, 6rem);
+    align-items: center;
+    padding: clamp(1.5rem, 5vw, 3.5rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: none;
+  }
+
+  @media (max-width: 48rem) {
+    .hero-grid,
+    .independence-panel {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,199 @@
+---
+import Breadcrumbs from '../../components/static/Breadcrumbs.astro';
+import DiagramTypeBadge from '../../components/static/DiagramTypeBadge.astro';
+import SourceBlock from '../../components/static/SourceBlock.astro';
+import StaticDiagramExample from '../../components/static/StaticDiagramExample.astro';
+import { getGuide } from '../../data/guides';
+import { diagramTemplates, type DiagramTemplate } from '../../data/templates';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export function getStaticPaths() {
+  return diagramTemplates.map((template) => ({
+    params: { slug: template.slug },
+    props: { template },
+  }));
+}
+
+const { template } = Astro.props as { template: DiagramTemplate };
+const guide = getGuide(template.relatedGuide);
+const related = diagramTemplates
+  .filter(
+    (candidate) =>
+      candidate.slug !== template.slug &&
+      (candidate.relatedGuide === template.relatedGuide ||
+        candidate.visualKind === template.visualKind),
+  )
+  .slice(0, 3);
+const breadcrumbs = [
+  { href: '/', label: 'Home' },
+  { href: '/templates/', label: 'Templates' },
+  { href: `/templates/${template.slug}/`, label: template.name },
+] as const;
+const canonicalPath = `/templates/${template.slug}/`;
+const canonicalUrl = new URL(canonicalPath, Astro.site).toString();
+const socialImageUrl = new URL('/og-default.png', Astro.site).toString();
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: `${template.name} — Mermaid template`,
+  description: template.summary,
+  url: canonicalUrl,
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': canonicalUrl,
+  },
+  image: {
+    '@type': 'ImageObject',
+    url: socialImageUrl,
+    width: 1200,
+    height: 630,
+  },
+  datePublished: '2026-07-21',
+  dateModified: '2026-07-21',
+  inLanguage: 'en',
+  proficiencyLevel: 'Beginner',
+  about: template.diagramType,
+  isAccessibleForFree: true,
+  author: {
+    '@type': 'Organization',
+    name: 'Open Mermaid contributors',
+    url: new URL('/about/', Astro.site).toString(),
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'Open Mermaid',
+    url: new URL('/', Astro.site).toString(),
+  },
+  hasPart: {
+    '@type': 'SoftwareSourceCode',
+    codeSampleType: 'full',
+    programmingLanguage: 'Mermaid',
+    text: template.source,
+  },
+};
+---
+
+<BaseLayout
+  title={`${template.name} — Mermaid template`}
+  description={`${template.summary} View source, an accessible example, usage guidance, and common errors.`}
+  canonicalPath={canonicalPath}
+  pageType="article"
+  jsonLd={jsonLd}
+  breadcrumbs={breadcrumbs}
+>
+  <div class="shell">
+    <Breadcrumbs items={breadcrumbs} />
+    <header class="page-hero page-hero--compact template-heading">
+      <div>
+        <p class="eyebrow">{template.diagramType} template</p>
+        <h1>{template.name}</h1>
+        <p class="lede">{template.summary}</p>
+      </div>
+      <DiagramTypeBadge maturity={template.maturity} />
+    </header>
+
+    <div class="article-layout">
+      <article class="article-content">
+        {
+          template.maturity !== 'stable' && (
+            <aside class="callout" aria-label="Maturity note">
+              <strong>Upstream {template.maturity} grammar.</strong> Syntax or rendering may change
+              when Mermaid is upgraded. Keep the source and revalidate it against the pinned
+              version.
+            </aside>
+          )
+        }
+
+        <section aria-labelledby="example-heading">
+          <h2 id="example-heading">Rendered example</h2>
+          <p>
+            This source-faithful Mermaid rendering is generated and sanitized at release time, so
+            the public page loads no Mermaid runtime. The editor provides the interactive preview.
+          </p>
+          <StaticDiagramExample
+            id={`template-${template.slug}`}
+            title={template.name}
+            description={template.sourceDescription}
+            kind={template.visualKind}
+            assetPath={`/examples/templates/${template.slug}.svg`}
+          />
+        </section>
+
+        <section aria-labelledby="source-heading">
+          <h2 id="source-heading">Mermaid source</h2>
+          <SourceBlock source={template.source} label={`Source for ${template.name}`} />
+          <div class="button-row">
+            <a class="button" href={`/editor/?template=${template.slug}`}>Use this template</a>
+            <a class="button-secondary" href="/editor/">Open a blank editor</a>
+          </div>
+        </section>
+
+        <section aria-labelledby="when-heading">
+          <h2 id="when-heading">When to use it</h2>
+          <p>{template.useWhen}</p>
+          <p>
+            Replace the example labels and IDs with terms your readers already know. Keep the first
+            version small, verify its reading order, then add only the relationships needed to
+            answer the diagram’s question.
+          </p>
+        </section>
+
+        <section aria-labelledby="errors-heading">
+          <h2 id="errors-heading">Common errors</h2>
+          <ul>
+            {template.commonErrors.map((error) => <li>{error}</li>)}
+            <li>
+              Valid syntax can still be confusing; check the visual at its final size and provide
+              supporting text.
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <aside class="article-aside" aria-labelledby="related-heading">
+        <h2 id="related-heading">Keep learning</h2>
+        {
+          guide && (
+            <p>
+              <>
+                <a href={`/guides/${guide.slug}/`}>{guide.title}</a>
+                <br />
+              </>
+              <span class="muted">{guide.readingMinutes} min read</span>
+            </p>
+          )
+        }
+        <h3>Related templates</h3>
+        <ul>
+          {
+            related.map((item) => (
+              <li>
+                <a href={`/templates/${item.slug}/`}>{item.name}</a>
+              </li>
+            ))
+          }
+        </ul>
+        <p><a href="/templates/">All templates</a></p>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .template-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .template-heading > :first-child {
+    max-inline-size: 52rem;
+  }
+
+  @media (max-width: 38rem) {
+    .template-heading {
+      flex-direction: column-reverse;
+    }
+  }
+</style>

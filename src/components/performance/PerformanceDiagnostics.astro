@@ -1,0 +1,326 @@
+<section class="vitals-console" aria-labelledby="local-vitals-heading">
+  <div class="vitals-console__header">
+    <div>
+      <p class="eyebrow">Private diagnostics</p>
+      <h2 id="local-vitals-heading">This browser’s measurements</h2>
+      <p class="muted">
+        Nothing on this page sends performance data over the network. Local history is optional,
+        bounded, and separate from your diagrams.
+      </p>
+    </div>
+    <label class="vitals-toggle">
+      <input id="vitals-history-toggle" type="checkbox" />
+      <span>Save 30-day history in this browser</span>
+    </label>
+  </div>
+
+  <p id="vitals-live-status" class="vitals-status" role="status" aria-live="polite">
+    Starting current-visit measurement…
+  </p>
+
+  <div class="vitals-current" aria-label="Current visit Web Vitals">
+    {
+      [
+        ['LCP', 'Largest Contentful Paint', '≤ 2.5 s'],
+        ['INP', 'Interaction to Next Paint', '≤ 200 ms'],
+        ['CLS', 'Cumulative Layout Shift', '≤ 0.1'],
+        ['FCP', 'First Contentful Paint', '≤ 1.8 s'],
+        ['TTFB', 'Time to First Byte', '≤ 800 ms'],
+      ].map(([name, label, target]) => (
+        <article class="vital-card" data-current-vital={name} data-rating="waiting">
+          <div class="vital-card__meta">
+            <span>{name}</span>
+            <span>Good {target}</span>
+          </div>
+          <strong data-vital-value>Waiting</strong>
+          <p>{label}</p>
+        </article>
+      ))
+    }
+  </div>
+
+  <div class="vitals-history-heading">
+    <div>
+      <h3>Local 75th-percentile history</h3>
+      <p id="vitals-history-summary" class="muted">
+        Enable local history to keep measurements across visits.
+      </p>
+    </div>
+    <div class="vitals-filters" aria-label="Performance history filters">
+      <label>
+        Page group
+        <select id="vitals-page-filter">
+          <option value="all">All pages</option>
+          <option value="home">Home</option>
+          <option value="editor">Editor</option>
+          <option value="templates">Template index</option>
+          <option value="template">Template pages</option>
+          <option value="guides">Guide index</option>
+          <option value="guide">Guide pages</option>
+          <option value="about">About</option>
+          <option value="privacy">Privacy</option>
+          <option value="security">Security</option>
+          <option value="performance">Performance</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label>
+        Viewport
+        <select id="vitals-device-filter">
+          <option value="all">All sizes</option>
+          <option value="small">Small</option>
+          <option value="large">Large</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="vitals-table-wrap">
+    <table>
+      <caption class="sr-only"> Locally stored Web Vitals grouped by metric </caption>
+      <thead>
+        <tr>
+          <th scope="col">Metric</th>
+          <th scope="col">Local p75</th>
+          <th scope="col">Good samples</th>
+          <th scope="col">Samples</th>
+          <th scope="col">Signal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          ['LCP', 'INP', 'CLS', 'FCP', 'TTFB'].map((name) => (
+            <tr data-history-vital={name}>
+              <th scope="row">{name}</th>
+              <td data-history-p75>—</td>
+              <td data-history-good>—</td>
+              <td data-history-count>0</td>
+              <td data-history-rating>Not measured</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="vitals-actions">
+    <button id="vitals-download" class="button-secondary" type="button" disabled>
+      Download aggregate report
+    </button>
+    <button id="vitals-clear" class="button-secondary" type="button" disabled>
+      Clear performance history
+    </button>
+  </div>
+
+  <aside class="vitals-boundary" aria-labelledby="vitals-boundary-heading">
+    <h3 id="vitals-boundary-heading">What this can—and cannot—tell you</h3>
+    <p>
+      These measurements describe visits in this browser profile only. They are useful for local
+      diagnosis, not population-wide claims. The sandboxed Mermaid preview is intentionally
+      isolated, so this top-level collector cannot inspect activity inside its iframe. Production
+      field health comes from Chrome UX Report data for the final canonical origin.
+    </p>
+  </aside>
+</section>
+
+<script>
+  import '../../scripts/performance-diagnostics';
+</script>
+
+<style>
+  .vitals-console {
+    padding: clamp(1.25rem, 4vw, 2rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+  }
+
+  .vitals-console__header,
+  .vitals-history-heading,
+  .vitals-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .vitals-toggle {
+    display: flex;
+    min-block-size: 2.75rem;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-weight: 700;
+  }
+
+  .vitals-toggle input {
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
+    accent-color: var(--color-brand);
+  }
+
+  .vitals-status {
+    padding: 0.65rem 0.8rem;
+    border-inline-start: 3px solid var(--color-brand);
+    background: var(--color-surface-raised);
+  }
+
+  .vitals-current {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: 0.7rem;
+    margin-block: 1.25rem 2rem;
+  }
+
+  .vital-card {
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-block-start: 3px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  .vital-card[data-rating='good'] {
+    border-block-start-color: #087a55;
+  }
+
+  .vital-card[data-rating='needs-improvement'] {
+    border-block-start-color: #9b5c00;
+  }
+
+  .vital-card[data-rating='poor'] {
+    border-block-start-color: #b42318;
+  }
+
+  .vital-card__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--color-muted);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+  }
+
+  .vital-card strong {
+    display: block;
+    margin-block: 0.7rem 0.2rem;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 450;
+  }
+
+  .vital-card p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.82rem;
+  }
+
+  .vitals-history-heading {
+    margin-block-end: 1rem;
+  }
+
+  .vitals-history-heading h3 {
+    margin: 0;
+  }
+
+  .vitals-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  .vitals-filters label {
+    display: grid;
+    gap: 0.25rem;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .vitals-filters select {
+    min-block-size: 2.5rem;
+    padding-inline: 0.65rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+  }
+
+  .vitals-table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th,
+  td {
+    padding: 0.7rem;
+    border-block-end: 1px solid var(--color-border);
+    text-align: start;
+    white-space: nowrap;
+  }
+
+  thead th {
+    color: var(--color-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  [data-history-rating='good'] {
+    color: #087a55;
+  }
+
+  [data-history-rating='needs-improvement'] {
+    color: #8a5200;
+  }
+
+  [data-history-rating='poor'] {
+    color: #b42318;
+  }
+
+  .vitals-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-block-start: 1rem;
+  }
+
+  .vitals-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  .vitals-boundary {
+    margin-block-start: 2rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-raised);
+  }
+
+  .vitals-boundary h3 {
+    font-size: 1rem;
+  }
+
+  .vitals-boundary p {
+    margin: 0;
+  }
+
+  @media (max-width: 44rem) {
+    .vitals-console__header,
+    .vitals-history-heading {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .vitals-toggle {
+      inline-size: 100%;
+    }
+  }
+</style>
