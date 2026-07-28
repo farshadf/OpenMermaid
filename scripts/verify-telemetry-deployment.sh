@@ -68,6 +68,8 @@ start_caddy() {
     --tmpfs /data:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=1000,gid=1000 \
     --tmpfs /config:rw,noexec,nosuid,nodev,size=4m,mode=0700,uid=1000,gid=1000 \
     --env OPEN_MERMAID_SITE=http://:8080 \
+    --env OPEN_MERMAID_EDITOR_SITE=http://:8081 \
+    --env OPEN_MERMAID_EDITOR_ORIGIN=http://127.0.0.1:8081 \
     --env OPEN_MERMAID_UPSTREAM=web:8080 \
     --env "OPEN_MERMAID_TELEMETRY_UPSTREAM=${caddy_telemetry_upstream}" \
     --volume "$project_root/ops/caddy/openmermaid-telemetry.caddy:/etc/caddy/Caddyfile:ro" \
@@ -180,6 +182,8 @@ rg --quiet "read_only: true" "$verify_dir/compose.resolved.yml"
 docker run --rm \
   --network none \
   --env OPEN_MERMAID_SITE=http://127.0.0.1:8080 \
+  --env OPEN_MERMAID_EDITOR_SITE=http://127.0.0.1:8081 \
+  --env OPEN_MERMAID_EDITOR_ORIGIN=http://127.0.0.1:8081 \
   --env OPEN_MERMAID_UPSTREAM=127.0.0.1:8088 \
   --env OPEN_MERMAID_TELEMETRY_UPSTREAM=127.0.0.1:8091 \
   --volume "$project_root/ops/caddy/openmermaid-telemetry.caddy:/etc/caddy/Caddyfile:ro" \

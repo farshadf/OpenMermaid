@@ -1,6 +1,7 @@
 ---
 import Breadcrumbs from '../components/static/Breadcrumbs.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { editorHref } from '../lib/site/origins';
 
 const breadcrumbs = [
   { href: '/', label: 'Home' },
@@ -89,7 +90,7 @@ const breadcrumbs = [
           <li>Portable static deployment</li>
           <li>Truthful discoverability</li>
         </ul>
-        <p><a href="/editor/">Open the editor</a></p>
+        <p><a href={editorHref()}>Open the editor</a></p>
       </aside>
     </div>
   </div>

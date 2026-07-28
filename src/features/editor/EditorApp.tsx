@@ -41,6 +41,7 @@ import {
 } from '@lib/storage';
 
 import { en } from '../../i18n/en';
+import { publicHref } from '../../lib/site/origins';
 import type { SourceTransformation } from './CodeEditor';
 import { DocumentLibrary } from './DocumentLibrary';
 import { ExportDialog } from './ExportDialog';
@@ -981,7 +982,7 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
           <Icon name="menu" />
         </button>
         {hostBridge.capabilities.externalNavigation ? (
-          <a class="app-brand" href="/" aria-label={en.editor.shell.homeLabel}>
+          <a class="app-brand" href={publicHref()} aria-label={en.editor.shell.homeLabel}>
             <span class="app-brand__mark" aria-hidden="true">
               {en.appMark}
             </span>
@@ -1122,8 +1123,8 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
               </label>
               {hostBridge.capabilities.externalNavigation ? (
                 <>
-                  <a href="/guides/">{en.editor.shell.guides}</a>
-                  <a href="/privacy/">{en.editor.shell.privacy}</a>
+                  <a href={publicHref('/guides/')}>{en.editor.shell.guides}</a>
+                  <a href={publicHref('/privacy/')}>{en.editor.shell.privacy}</a>
                 </>
               ) : null}
             </div>
@@ -1390,7 +1391,6 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
           </div>
         )}
       </div>
-      <div class="ad-slot ad-slot--editor-rail" data-enabled="false" aria-hidden="true" />
     </div>
   );
 }

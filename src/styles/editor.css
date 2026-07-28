@@ -1100,11 +1100,6 @@ input.document-title {
   text-align: center;
 }
 
-.ad-slot[data-enabled='false'],
-.ad-slot:empty {
-  display: none;
-}
-
 @keyframes editor-spin {
   to {
     transform: rotate(360deg);

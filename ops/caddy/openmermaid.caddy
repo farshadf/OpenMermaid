@@ -15,6 +15,15 @@
 	# do not duplicate the build-derived script/style CSP.
 	header Strict-Transport-Security "max-age=31536000"
 
+	# The monetized public origin never serves the local editor or renderer.
+	# Redirect the user-facing editor path to the storage-isolated hostname and
+	# make direct renderer probes unavailable on the public content origin.
+	@editor_path path /editor /editor/*
+	redir @editor_path {$OPEN_MERMAID_EDITOR_ORIGIN}{uri} 308
+
+	@renderer_path path /renderer /renderer/*
+	respond @renderer_path 404
+
 	reverse_proxy {$OPEN_MERMAID_UPSTREAM:127.0.0.1:8088} {
 		health_uri /healthz
 		health_status 200
@@ -22,6 +31,30 @@
 		health_timeout 2s
 		health_fails 3
 		health_passes 2
+	}
+}
+
+# Storage-isolated editor origin. It serves only the editor, its renderer, and
+# their immutable local assets. Public content and agency tags are unreachable
+# here even though both hostnames reuse the same verified container artifact.
+{$OPEN_MERMAID_EDITOR_SITE} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+
+	@editor_assets path /editor /editor/* /renderer /renderer/* /_assets/* /favicon.svg /og-default.png /healthz /api/telemetry/*
+	handle @editor_assets {
+		reverse_proxy {$OPEN_MERMAID_UPSTREAM:127.0.0.1:8088} {
+			health_uri /healthz
+			health_status 200
+			health_interval 10s
+			health_timeout 2s
+			health_fails 3
+			health_passes 2
+		}
+	}
+
+	handle {
+		respond 404
 	}
 }
 

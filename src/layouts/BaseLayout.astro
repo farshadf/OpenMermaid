@@ -1,10 +1,10 @@
 ---
-import AdSlot from '../components/static/AdSlot.astro';
 import VitalsBootstrap from '../components/performance/VitalsBootstrap.astro';
 import TelemetryBootstrap from '../components/telemetry/TelemetryBootstrap.astro';
 import { english } from '../content/en';
 import { publicNavigation, SITE_DESCRIPTION, SITE_TITLE, type Breadcrumb } from '../data/site';
 import { classifyPerformancePage } from '../lib/performance/page-kind';
+import { editorHref } from '../lib/site/origins';
 
 type JsonLd = Record<string, unknown>;
 
@@ -17,6 +17,7 @@ interface Props {
   jsonLd?: JsonLd | JsonLd[];
   breadcrumbs?: readonly Breadcrumb[];
   bodyClass?: string;
+  agencyEligible?: boolean;
 }
 
 const {
@@ -28,6 +29,7 @@ const {
   jsonLd = [],
   breadcrumbs = [],
   bodyClass = '',
+  agencyEligible = false,
 } = Astro.props;
 
 const fullTitle = title === SITE_TITLE ? title : `${title} | ${SITE_TITLE}`;
@@ -55,6 +57,7 @@ if (breadcrumbs.length > 0) {
 const safeJsonLd = JSON.stringify(ldItems).replaceAll('<', '\\u003c');
 const isCurrentNavigation = (href: string): boolean =>
   href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href);
+const navigationHref = (href: string): string => (href === '/editor/' ? editorHref() : href);
 const performancePageKind = classifyPerformancePage(Astro.url.pathname);
 const aggregateTelemetryRoute =
   Astro.url.pathname === '/editor/' ||
@@ -122,7 +125,7 @@ const aggregateTelemetryRoute =
               publicNavigation.map((item) => (
                 <li>
                   <a
-                    href={item.href}
+                    href={navigationHref(item.href)}
                     aria-current={isCurrentNavigation(item.href) ? 'page' : undefined}
                   >
                     {item.label}
@@ -134,8 +137,6 @@ const aggregateTelemetryRoute =
         </nav>
       </div>
     </header>
-
-    <AdSlot placement="banner" />
 
     <main id="main-content" tabindex="-1">
       <slot />
@@ -171,7 +172,7 @@ const aggregateTelemetryRoute =
         <p>{english.footer.independence}</p>
       </div>
     </footer>
-    <VitalsBootstrap />
+    {!agencyEligible && <VitalsBootstrap />}
     {aggregateTelemetryRoute && <TelemetryBootstrap />}
   </body>
 </html>

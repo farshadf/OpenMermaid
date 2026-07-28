@@ -1,6 +1,7 @@
 ---
 import StaticDiagramExample from '../components/static/StaticDiagramExample.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { editorHref } from '../lib/site/origins';
 ---
 
 <BaseLayout
@@ -20,7 +21,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </p>
         <div class="button-row">
           <a class="button" href="/">Return home</a>
-          <a class="button-secondary" href="/editor/">Open the editor</a>
+          <a class="button-secondary" href={editorHref()}>Open the editor</a>
         </div>
       </div>
       <StaticDiagramExample

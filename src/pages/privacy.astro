@@ -7,6 +7,7 @@ const breadcrumbs = [
   { href: '/privacy/', label: 'Privacy' },
 ] as const;
 const aggregateTelemetryEnabled = import.meta.env.PUBLIC_TELEMETRY_MODE === 'aggregate';
+const agencyAdvertisingEnabled = import.meta.env.PUBLIC_AD_MODE === 'agency';
 ---
 
 <BaseLayout
@@ -23,7 +24,7 @@ const aggregateTelemetryEnabled = import.meta.env.PUBLIC_TELEMETRY_MODE === 'agg
       <p class="lede">
         Diagram content stays on this device unless you explicitly share or export it.
       </p>
-      <p class="muted">Last updated: 2026-07-27</p>
+      <p class="muted">Last updated: 2026-07-28</p>
     </header>
 
     <article class="measure policy-copy">
@@ -34,9 +35,45 @@ const aggregateTelemetryEnabled = import.meta.env.PUBLIC_TELEMETRY_MODE === 'agg
           account system and no application server that receives your diagram source. It does not
           include session replay, AI services, or ChatGPT connectivity in version 1. An optional
           first-party aggregate template-usage system is described below when it is available on
-          this deployment.
+          this deployment. Public guide and template pages may use agency advertising when this
+          deployment enables it; the editor remains on an isolated origin.
         </p>
       </section>
+      {
+        agencyAdvertisingEnabled && (
+          <section id="advertising">
+            <h2>Advertising on public content</h2>
+            <p>
+              Open Mermaid uses Google AdSense on eligible public guide and template detail pages.
+              Google receives the public page context and the browser and network information
+              required to request, select, deliver, measure, report, and protect advertising against
+              invalid traffic. Depending on your location and choices, this can include IP address,
+              browser or device information, consent signals, ad-unit identifiers, impression and
+              viewability measurements, clicks, and cookies or browser storage.
+            </p>
+            <p>
+              Google Privacy &amp; Messaging provides the deployment's advertising consent and
+              privacy-choice experience where applicable. Personalized advertising is served only
+              according to the choices and provider modes available for the request. Limited or
+              non-personalized advertising can still use network information and fraud-prevention
+              technology; it should not be understood as anonymous.
+            </p>
+            <p>
+              Advertising runs on the public content hostname. The editor and renderer use a
+              different hostname with no agency tag. Open Mermaid does not provide Google with
+              Mermaid source, rendered SVG, local document titles or IDs, editor searches, imports,
+              exports, clipboard contents, URL-fragment shares, or Open Mermaid product telemetry
+              identifiers.
+            </p>
+            <p>
+              Google is the authoritative source for advertising requests, impressions, viewability,
+              clicks, invalid-traffic adjustments, and revenue reporting. Open Mermaid may retain
+              daily aggregate financial and placement reports retrieved from the agency, but does
+              not join those reports to local documents or product telemetry.
+            </p>
+          </section>
+        )
+      }
       {
         aggregateTelemetryEnabled && (
           <section>
@@ -130,6 +167,11 @@ const aggregateTelemetryEnabled = import.meta.env.PUBLIC_TELEMETRY_MODE === 'agg
             aggregateTelemetryEnabled
               ? 'The catalogue retrieves the public aggregate-count snapshot described above; a template-usage event is sent only after you enable sharing.'
               : 'This deployment makes no network analytics or outbound telemetry request.'
+          }{' '}
+          {
+            agencyAdvertisingEnabled
+              ? 'Eligible public article pages make the Google advertising and consent requests described above. Those requests never run in the editor.'
+              : ''
           } The optional production CrUX report runs in project automation and does not add a browser
           request.
         </p>

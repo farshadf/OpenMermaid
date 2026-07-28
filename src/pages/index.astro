@@ -1,11 +1,11 @@
 ---
-import AdSlot from '../components/static/AdSlot.astro';
 import StaticDiagramExample from '../components/static/StaticDiagramExample.astro';
 import TemplateCard from '../components/static/TemplateCard.astro';
 import { english } from '../content/en';
 import { guides } from '../data/guides';
 import { diagramTemplates } from '../data/templates';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { editorHref } from '../lib/site/origins';
 
 const featuredTemplates = diagramTemplates.filter((template) =>
   ['flowchart-starter', 'sequence-starter', 'er-starter'].includes(template.slug),
@@ -25,7 +25,7 @@ const jsonLd = [
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
     name: 'Open Mermaid',
-    url: new URL('/editor/', Astro.site).toString(),
+    url: editorHref(),
     description: english.siteDescription,
     applicationCategory: 'DeveloperApplication',
     applicationSubCategory: 'Diagram editor',
@@ -58,7 +58,7 @@ const jsonLd = [
           workspace. No account, application backend, API key, or runtime CDN is required.
         </p>
         <div class="button-row">
-          <a class="button" href="/editor/">{english.actions.openEditor}</a>
+          <a class="button" href={editorHref()}>{english.actions.openEditor}</a>
           <a class="button-secondary" href="/templates/">{english.actions.browseTemplates}</a>
         </div>
         <p class="privacy-line">
@@ -113,8 +113,6 @@ const jsonLd = [
       </div>
     </div>
   </section>
-
-  <AdSlot placement="content-rail" />
 
   <section class="content-section" aria-labelledby="templates-heading">
     <div class="shell">

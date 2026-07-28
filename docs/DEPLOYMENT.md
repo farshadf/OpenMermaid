@@ -3,7 +3,8 @@
 Open Mermaid ships as a static `dist/` artifact. No Node process, database, account service, API
 key, OpenAI/ChatGPT connection, or server-side rendering is required for the application runtime.
 An optional aggregate template-use profile adds a separately packaged same-origin collector; the
-static application remains fully functional without it.
+static application remains fully functional without it. Agency advertising is another explicit
+artifact mode and requires distinct public-content and editor hostnames.
 
 ## Release inputs
 
@@ -11,8 +12,10 @@ static application remains fully functional without it.
 - frozen `pnpm-lock.yaml`
 - reviewed source commit with passing CI
 - final HTTPS canonical origin with no path component
+- final distinct HTTPS editor origin with no path component
 - explicit decision to enable indexing
 - explicit `PUBLIC_TELEMETRY_MODE=off|aggregate` decision; unset defaults to `off`
+- explicit `PUBLIC_AD_MODE=off|placeholder|agency` decision; unset defaults to `off`
 - one canonical domain decision recorded according to `DOMAIN_SELECTION.md`
 - completed name, domain, trademark, privacy, security, license, accessibility, and browser review
 
@@ -22,8 +25,10 @@ Build from a clean checkout:
 corepack enable
 pnpm install --frozen-lockfile
 PUBLIC_SITE_URL=https://diagrams.example.org \
+PUBLIC_EDITOR_ORIGIN=https://app.diagrams.example.org \
 PUBLIC_INDEX_SITE=true \
 PUBLIC_TELEMETRY_MODE=off \
+PUBLIC_AD_MODE=off \
 pnpm build:release
 pnpm test:metadata
 pnpm test:independence
@@ -43,7 +48,8 @@ Preview and pull-request deployments must:
 - require access control when content or unreleased behavior is sensitive;
 - use a preview-specific origin rather than a production canonical domain;
 - never reuse production aggregate telemetry storage, ads, credentials, or user data; use
-  `PUBLIC_TELEMETRY_MODE=off`.
+  `PUBLIC_TELEMETRY_MODE=off` and `PUBLIC_AD_MODE=off` (or the inert placeholder only for an
+  explicitly reviewed layout preview).
 
 Meta robots is defense in depth, not a substitute for preview access control. `robots.txt` does not remove a leaked URL from search results.
 
@@ -66,7 +72,13 @@ The portable `_headers` example intentionally omits HSTS because it cannot know 
 
 ## Canonical self-hosted profile
 
-The preferred self-hosted topology is host Caddy on public ports 80/443 proxying to the static container published only at `127.0.0.1:8088`. The Docker image packages the already-tested `dist/`; it does not run Node or rebuild application source. The container translates `_headers`, MIME, cache, health, and real-404 behavior, while Caddy owns public HTTPS, canonical redirects, compression, production HSTS, and health-aware proxying.
+The preferred self-hosted topology is host Caddy on public ports 80/443 proxying to the static
+container published only at `127.0.0.1:8088`. Caddy exposes the public-content and editor hostnames
+with different route allowlists even though they reuse the same verified artifact. The Docker image
+packages the already-tested `dist/`; it does not run Node or rebuild application source. The
+container translates `_headers`, MIME, cache, health, and real-404 behavior, while Caddy owns public
+HTTPS, canonical redirects, origin separation, compression, production HSTS, and health-aware
+proxying.
 
 Use the pinned artifact-only `Dockerfile`, hardened `compose.yml`, and `ops/caddy/openmermaid.caddy`. Run `pnpm test:deployment:browser` before promotion; CI exercises the same image through a real pinned Caddy edge and Chromium renderer smoke, then generates a separate container SBOM. See [SELF_HOSTING.md](SELF_HOSTING.md) for the complete existing-Caddy and clean-host runbook.
 
@@ -132,7 +144,12 @@ From a fresh browser profile and command-line client, verify:
     request, and the optional CrUX workflow targets the exact canonical origin;
 12. in telemetry-off mode, `/editor/` and `/templates/` make no telemetry request and retain
     `connect-src 'none'`; in aggregate mode, opt-in, opt-out, retry, exact payload, coarsened count,
-    and collector-failure behavior pass without exposing diagram data.
+    and collector-failure behavior pass without exposing diagram data;
+13. public `/editor/` redirects to the editor hostname, public `/renderer/` is unavailable, and the
+    editor hostname rejects public guide/template pages;
+14. in ad-off mode no advertising bytes or manifest exist; in agency mode exactly one placement
+    appears only on eligible detail pages, consent/provider reporting works, and request capture
+    proves no diagram or editor data reaches the agency.
 
 ## Rollback
 

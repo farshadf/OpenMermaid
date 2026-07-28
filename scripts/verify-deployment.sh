@@ -23,6 +23,7 @@ compose_project="open-mermaid-verify-${verify_suffix}"
 image_tag="verify-${verify_suffix}"
 app_port=${OPEN_MERMAID_VERIFY_APP_PORT:-18088}
 caddy_port=${OPEN_MERMAID_VERIFY_CADDY_PORT:-18089}
+editor_caddy_port=${OPEN_MERMAID_VERIFY_EDITOR_CADDY_PORT:-18090}
 caddy_name="open-mermaid-caddy-verify-${verify_suffix}"
 caddy_image="caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d"
 verify_dir=$(mktemp -d)
@@ -77,6 +78,8 @@ compose config --quiet
 docker run --rm \
   --network none \
   --env OPEN_MERMAID_SITE=http://127.0.0.1:8080 \
+  --env OPEN_MERMAID_EDITOR_SITE=http://127.0.0.1:8081 \
+  --env OPEN_MERMAID_EDITOR_ORIGIN=http://127.0.0.1:8081 \
   --env OPEN_MERMAID_UPSTREAM=127.0.0.1:8088 \
   --volume "$project_root/ops/caddy/openmermaid.caddy:/etc/caddy/Caddyfile:ro" \
   "$caddy_image" \
@@ -198,6 +201,7 @@ docker run --detach \
   --name "$caddy_name" \
   --network "${compose_project}_default" \
   --publish "127.0.0.1:${caddy_port}:8080" \
+  --publish "127.0.0.1:${editor_caddy_port}:8081" \
   --read-only \
   --cap-drop ALL \
   --cap-add NET_BIND_SERVICE \
@@ -205,6 +209,8 @@ docker run --detach \
   --tmpfs /data:rw,noexec,nosuid,nodev,size=16m,mode=0700 \
   --tmpfs /config:rw,noexec,nosuid,nodev,size=4m,mode=0700 \
   --env OPEN_MERMAID_SITE=http://:8080 \
+  --env OPEN_MERMAID_EDITOR_SITE=http://:8081 \
+  --env OPEN_MERMAID_EDITOR_ORIGIN="http://127.0.0.1:${editor_caddy_port}" \
   --env OPEN_MERMAID_UPSTREAM=web:8080 \
   --volume "$project_root/ops/caddy/openmermaid.caddy:/etc/caddy/Caddyfile:ro" \
   "$caddy_image" >/dev/null
@@ -220,12 +226,36 @@ until curl --fail --silent --output /dev/null "http://127.0.0.1:${caddy_port}/he
 done
 
 edge_origin="http://127.0.0.1:${caddy_port}"
+editor_edge_origin="http://127.0.0.1:${editor_caddy_port}"
 fetch "$edge_origin/" "$verify_dir/edge.headers" "$verify_dir/edge.html"
 rg --quiet '<title>Open Mermaid' "$verify_dir/edge.html"
 assert_header "$verify_dir/edge.headers" '^Strict-Transport-Security: max-age=31536000\r?$' 'production HSTS'
 assert_header "$verify_dir/edge.headers" '^Content-Security-Policy: frame-ancestors '\''self'\''\r?$' 'proxied CSP'
 if [ "$(rg --ignore-case --count '^Content-Security-Policy:' "$verify_dir/edge.headers")" -ne 1 ]; then
   echo "Caddy duplicated the response CSP." >&2
+  exit 1
+fi
+
+editor_redirect_status=$(curl --silent --dump-header "$verify_dir/editor-redirect.headers" --output /dev/null --write-out '%{http_code}' "$edge_origin/editor/")
+if [ "$editor_redirect_status" != 308 ]; then
+  echo "Expected public /editor/ to redirect permanently, received $editor_redirect_status." >&2
+  exit 1
+fi
+assert_header "$verify_dir/editor-redirect.headers" "^Location: ${editor_edge_origin}/editor/\r?$" 'isolated editor redirect'
+
+public_renderer_status=$(curl --silent --output /dev/null --write-out '%{http_code}' "$edge_origin/renderer/")
+if [ "$public_renderer_status" != 404 ]; then
+  echo "Expected public /renderer/ to return 404, received $public_renderer_status." >&2
+  exit 1
+fi
+
+fetch "$editor_edge_origin/editor/" "$verify_dir/editor-edge.headers" "$verify_dir/editor-edge.html"
+rg --quiet '<title>Mermaid editor' "$verify_dir/editor-edge.html"
+assert_header "$verify_dir/editor-edge.headers" '^Strict-Transport-Security: max-age=31536000\r?$' 'editor-origin HSTS'
+
+editor_public_content_status=$(curl --silent --output /dev/null --write-out '%{http_code}' "$editor_edge_origin/guides/flowcharts/")
+if [ "$editor_public_content_status" != 404 ]; then
+  echo "Expected the editor origin to reject public content, received $editor_public_content_status." >&2
   exit 1
 fi
 
@@ -244,7 +274,7 @@ fi
 
 if [ "${OPEN_MERMAID_VERIFY_BROWSER:-false}" = true ]; then
   echo "Running the deployed editor and sandboxed-renderer browser smoke"
-  node scripts/check-deployed-browser.mjs "$edge_origin"
+  node scripts/check-deployed-browser.mjs "$editor_edge_origin"
 fi
 
 docker logs "$caddy_name" >"$verify_dir/caddy.log" 2>&1

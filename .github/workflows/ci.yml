@@ -18,6 +18,7 @@ env:
   PUBLIC_SITE_URL: https://openmermaid.example
   PUBLIC_INDEX_SITE: 'false'
   PUBLIC_TELEMETRY_MODE: 'off'
+  PUBLIC_AD_MODE: 'off'
   CI: 'true'
 
 jobs:
@@ -229,6 +230,47 @@ jobs:
             test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+  advertising-contract:
+    name: Agency advertising artifact contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          run_install: false
+
+      - name: Use pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install frozen dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build and verify inert placeholder inventory
+        run: pnpm build && pnpm test:advertising
+        env:
+          PUBLIC_AD_MODE: placeholder
+          PUBLIC_INDEX_SITE: 'false'
+
+      - name: Build and verify the agency release contract
+        run: pnpm build:release && pnpm test:advertising && node scripts/check-built-site.mjs && pnpm test:independence
+        env:
+          PUBLIC_SITE_URL: https://openmermaid.test
+          PUBLIC_EDITOR_ORIGIN: https://app.openmermaid.test
+          PUBLIC_INDEX_SITE: 'true'
+          PUBLIC_AD_MODE: agency
+          PUBLIC_AD_PROVIDER: google-adsense
+          PUBLIC_ADSENSE_CLIENT: ca-pub-1234567890123456
+          PUBLIC_ADSENSE_SLOT: '1234567890'
 
   deployment:
     name: Docker and Caddy deployment contract

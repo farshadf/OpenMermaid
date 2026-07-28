@@ -5,7 +5,9 @@
 Open Mermaid v1 is a browser application that remains fully useful without an application backend,
 account, API key, telemetry collector, runtime CDN, AI provider, or ChatGPT connection. The
 deployable product is a portable static `dist/` directory. A separately deployed, privacy-bounded
-aggregate telemetry adapter is optional and never handles diagram content.
+aggregate telemetry adapter is optional and never handles diagram content. An agency-advertising
+release uses the same static artifact but requires storage-isolated public and editor hostnames;
+agency code never enters the editor origin or shared core.
 
 The design optimizes for:
 
@@ -52,6 +54,19 @@ Internet -> host Caddy :80/:443 -> 127.0.0.1:8088 -> static container :8080 -> d
 
 Caddy is the only public edge. Docker packages the exact tested artifact and publishes the static server only on host loopback. The image contains Nginx configuration and `dist/`, but no Node runtime, source tree, dependency store, account service, application secret, or writable content volume. Other compliant static hosts can still serve the same `dist/` directly.
 
+When agency advertising is enabled, Caddy exposes two deliberately different views of that
+artifact:
+
+```text
+openmermaid.<tld>      -> public content and eligible agency placements
+app.openmermaid.<tld>  -> editor, renderer, and required same-origin assets only
+```
+
+The public hostname redirects `/editor/` to the editor hostname and rejects `/renderer/`. The
+editor hostname rejects public content routes, so the guide/template pages that contain agency code
+cannot execute with the editor origin's IndexedDB authority. Host-only cookies and the absence of a
+cross-origin message bridge preserve the boundary. See `docs/ADVERTISING.md`.
+
 An operator who deliberately enables aggregate template telemetry adds one isolated same-origin
 adapter:
 
@@ -78,6 +93,10 @@ Rules:
 - no remote fonts, runtime content API, or client-side rendering requirement;
 - the default telemetry-off build contains no telemetry bootstrap or request; an aggregate build
   may load only the small same-origin adapter bootstrap described below;
+- the default ad-off build contains no advertising markup, style, bootstrap, manifest, provider
+  request, or CSP relaxation;
+- an agency build adds one measured provider placement only to guide/template detail pages on the
+  configured public origin;
 - no generated claims such as ratings or automatic accessibility conformance;
 - every template/guide exposes useful source and prose in HTML.
 

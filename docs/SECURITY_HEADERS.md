@@ -50,6 +50,31 @@ analytics origin. This mode is a distinct release artifact and must pass both th
 network contract and the ordinary malicious-input tests. Do not relax `connect-src` globally or
 add a wildcard to accommodate the collector.
 
+### Agency advertising policy
+
+`PUBLIC_AD_MODE=agency` changes policy only on eligible guide and template detail pages that contain
+the reviewed `content-stripe`. Those pages omit the local Web Vitals bootstrap and use a
+build-hashed origin gate with `strict-dynamic` to load the approved Google AdSense tag. The
+page-specific policy includes Google's
+[documented CSP fallback](https://support.google.com/adsense/answer/16283098) of `unsafe-inline` and permits
+`unsafe-eval` plus HTTPS provider scripts, connections, frames, images, fonts, workers, and media.
+In modern CSP implementations, the build hash and `strict-dynamic` remain the trust root;
+`unsafe-inline` is present for provider compatibility and legacy fallback. Google warns that a more
+restrictive policy may disrupt serving.
+
+This broader policy is acceptable only with the deployment's hostname boundary:
+
+- public content and agency code run on `PUBLIC_SITE_URL`;
+- editor storage and the renderer run on the distinct `PUBLIC_EDITOR_ORIGIN`;
+- Caddy prevents editor/renderer routes on the public host and public content on the editor host;
+- cookies remain host-only.
+
+Ad-off and placeholder builds retain the baseline policy and make no provider request. Never apply
+the agency policy globally, to `/editor/`, or to `/renderer/`. The build contract scans every HTML
+route and the advertising manifest records the exact inventory. Review current provider CSP
+guidance and captured nested origins before each activation because agency dependencies can change
+independently of this repository.
+
 ## Renderer policy
 
 ```text

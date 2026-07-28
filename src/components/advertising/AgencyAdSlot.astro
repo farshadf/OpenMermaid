@@ -1,0 +1,139 @@
+---
+import { isAdvertisingAllowed, type AdRouteKind } from '../../lib/advertising/contracts';
+import { advertisingConfig } from '../../lib/advertising/config';
+
+interface Props {
+  routeKind: AdRouteKind;
+}
+
+const { routeKind } = Astro.props;
+const enabled = isAdvertisingAllowed(advertisingConfig, routeKind);
+const placeholder = enabled && advertisingConfig.mode === 'placeholder';
+const agency = enabled && advertisingConfig.mode === 'agency';
+const advertisingStyles = `
+  .agency-ad {
+    inline-size: min(60.625rem, 100%);
+    margin-block: 1.5rem;
+    padding-block: 0.75rem 1rem;
+    border-block: 1px solid var(--color-border);
+  }
+  .agency-ad__label {
+    margin: 0 0 0.45rem;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    text-align: center;
+  }
+  .agency-ad__surface {
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    block-size: 5.625rem;
+    overflow: hidden;
+    background: var(--color-surface-raised);
+  }
+  .agency-ad__surface > .adsbygoogle {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+  .agency-ad--placeholder .agency-ad__surface {
+    border: 1px dashed var(--color-border);
+    color: var(--color-muted);
+    background:
+      repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 0.7rem,
+        color-mix(in srgb, var(--color-border) 38%, transparent) 0.7rem,
+        color-mix(in srgb, var(--color-border) 38%, transparent) 1.4rem
+      ),
+      var(--color-surface-raised);
+    font-size: 0.78rem;
+    text-align: center;
+  }
+  @media (max-width: 40rem) {
+    .agency-ad__surface {
+      block-size: 6.25rem;
+    }
+  }
+  @media print {
+    .agency-ad {
+      display: none;
+    }
+  }
+`;
+
+const bootstrap = `(() => {
+  const slots = [...document.querySelectorAll('[data-agency-ad-slot="google-adsense"]')];
+  if (slots.length === 0) return;
+  const publicOrigin = slots[0].getAttribute('data-public-origin');
+  if (publicOrigin === null || location.origin !== publicOrigin) return;
+  const client = slots[0].getAttribute('data-ad-client');
+  if (client === null || !/^ca-pub-\\d{16}$/.test(client)) return;
+  if (!document.querySelector('script[data-openmermaid-agency-loader]')) {
+    const loader = document.createElement('script');
+    loader.async = true;
+    loader.crossOrigin = 'anonymous';
+    loader.dataset.openmermaidAgencyLoader = 'google-adsense';
+    loader.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(client);
+    loader.addEventListener('error', () => {
+      for (const slot of slots) slot.setAttribute('data-ad-state', 'unavailable');
+    }, { once: true });
+    document.head.append(loader);
+  }
+  const queue = window.adsbygoogle = window.adsbygoogle || [];
+  for (const slot of slots) {
+    if (slot.getAttribute('data-ad-state') !== 'queued') {
+      slot.setAttribute('data-ad-state', 'queued');
+      queue.push({});
+    }
+  }
+})();`;
+---
+
+{
+  placeholder && (
+    <aside
+      class="agency-ad agency-ad--placeholder"
+      aria-label="Advertisement preview"
+      data-ad-placement="content-stripe"
+      data-ad-placeholder
+    >
+      <p class="agency-ad__label">Advertisement preview</p>
+      <div class="agency-ad__surface" aria-hidden="true">
+        <span>content-stripe · responsive 728×90 / 320×100</span>
+      </div>
+    </aside>
+  )
+}
+
+{
+  agency && advertisingConfig.mode === 'agency' && (
+    <aside
+      class="agency-ad"
+      aria-label="Advertisement"
+      data-ad-placement="content-stripe"
+      data-ad-provider={advertisingConfig.provider}
+      data-ad-policy-version={advertisingConfig.policyVersion}
+      data-consent-strategy={advertisingConfig.consentStrategy}
+    >
+      <p class="agency-ad__label">Advertisement</p>
+      <div class="agency-ad__surface">
+        <ins
+          class="adsbygoogle"
+          style="display:block"
+          data-agency-ad-slot="google-adsense"
+          data-public-origin={advertisingConfig.publicOrigin}
+          data-ad-client={advertisingConfig.client}
+          data-ad-slot={advertisingConfig.slot}
+          data-ad-format="horizontal"
+          data-full-width-responsive="true"
+          data-ad-state="ready"
+        />
+      </div>
+      <script is:inline set:html={bootstrap} />
+    </aside>
+  )
+}
+
+{enabled && <style is:inline set:html={advertisingStyles} />}

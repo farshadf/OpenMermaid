@@ -31,12 +31,14 @@ runtime CDN.
 - Lighthouse CI, opt-in local Web Vitals history, and an optional aggregate CrUX reporting workflow
 - An optional, separately deployed aggregate template-use adapter with explicit opt-in, a strict
   data allowlist, prior-day privacy-coarsened counts, and no diagram content
+- Optional agency-measured advertising on substantive public detail pages, isolated from the
+  editor by a separate hostname and disabled in the default build
 
 Version 1 deliberately excludes accounts, a document backend, cloud sync, collaboration, public
 galleries, general-purpose analytics, session replay, identity tracking, AI, ChatGPT code, active
-ads, service workers/offline guarantees, PDF, JPEG, and a visual drag-and-drop builder. Aggregate
-template-use reporting is an optional adapter; the default build contains no telemetry client or
-request and remains fully functional without the collector.
+editor advertising, service workers/offline guarantees, PDF, JPEG, and a visual drag-and-drop
+builder. Aggregate template-use reporting and public-content agency advertising are optional
+adapters; the default build contains neither runtime and remains fully functional without them.
 
 ## Requirements
 
@@ -58,7 +60,9 @@ The example configuration intentionally uses `https://openmermaid.example` and d
 
 ```dotenv
 PUBLIC_SITE_URL=https://openmermaid.example
+PUBLIC_EDITOR_ORIGIN=https://app.openmermaid.example
 PUBLIC_INDEX_SITE=false
+PUBLIC_AD_MODE=off
 ```
 
 Common commands:
@@ -75,6 +79,7 @@ pnpm test:build-reproducibility # byte-identical successive-build verification
 pnpm test:ci-config     # immutable GitHub Action and script-free install policy
 pnpm test:e2e           # Chromium, Firefox, and WebKit workflows
 pnpm test:metadata      # links, metadata, chunks, robots, and sitemap
+pnpm test:advertising   # mode, routes, provider isolation, and manifest
 pnpm test:deployment    # hardened Docker image and Caddy HTTP contract
 pnpm test:deployment:browser # deployed editor/renderer smoke (needs Chromium)
 pnpm test:independence  # standalone dependency/environment contract
@@ -98,6 +103,11 @@ Static Astro pages                 Editor route
                                     Mermaid + sanitizer only
 ```
 
+An agency-enabled deployment exposes public content and the editor on distinct hostnames. Caddy
+redirects the editor route away from the monetized public hostname and refuses public content on
+the editor hostname, preventing provider JavaScript from sharing the origin authority of local
+documents.
+
 The shared document, repository, URL codec, downloader, and renderer protocol point inward to provider-neutral contracts. Optional future adapters point toward those contracts; the web application never points toward ChatGPT or an AI service. Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DECISIONS.md](docs/DECISIONS.md) for boundaries and decisions.
 
 ## Security and privacy
@@ -118,7 +128,9 @@ Set a real canonical origin, keep preview indexing disabled, and build a portabl
 
 ```bash
 PUBLIC_SITE_URL=https://example.org \
+PUBLIC_EDITOR_ORIGIN=https://app.example.org \
 PUBLIC_INDEX_SITE=true \
+PUBLIC_AD_MODE=off \
 pnpm build:release
 ```
 
@@ -128,7 +140,12 @@ The canonical self-hosted profile packages the already-tested `dist/` in a pinne
 Internet -> host Caddy :80/:443 -> 127.0.0.1:8088 -> static container :8080
 ```
 
-No Node process, backend, account, credential, or writable content volume exists at runtime. The final TLD remains a release input; set Caddy and `PUBLIC_SITE_URL` to the same cleared canonical origin. Follow [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for safe existing-Caddy integration, setup from scratch, validation, log inspection, updates, and rollback. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the provider-neutral contract and other static hosts.
+No Node process, backend, account, credential, or writable content volume exists at runtime. The
+final TLD remains a release input; set Caddy to the same cleared public and editor hostnames used by
+`PUBLIC_SITE_URL` and `PUBLIC_EDITOR_ORIGIN`. Follow [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for
+safe existing-Caddy integration, setup from scratch, validation, log inspection, updates, and
+rollback. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the provider-neutral contract and other
+static hosts.
 
 Operators who deliberately enable aggregate template-use reporting add a separate same-origin
 collector and SQLite volume; the static application and document workflows remain independent.
@@ -146,7 +163,7 @@ retention, deployment, and verification contract.
 - [docs/DOMAIN_SELECTION.md](docs/DOMAIN_SELECTION.md) — `.app` and `.us` decision criteria
 - [docs/DESIGN.md](docs/DESIGN.md) — visual tokens, inspiration boundary, and UI rules
 - [docs/PERFORMANCE_MEASUREMENT.md](docs/PERFORMANCE_MEASUREMENT.md) — lab, local, and production field system
-- [docs/ADVERTISING.md](docs/ADVERTISING.md) — staged, privacy-preserving advertising implementation plan
+- [docs/ADVERTISING.md](docs/ADVERTISING.md) — agency measurement, origin isolation, consent, and release controls
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — evidence required before launch
 
 Automated dependency updates are configured with Dependabot. Release CI runs frozen installation, formatting, lint, type checks, unit and browser tests, accessibility and security checks, metadata and bundle checks, audit, license validation, SBOM generation, and Lighthouse budgets.

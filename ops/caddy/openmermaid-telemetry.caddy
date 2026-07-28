@@ -1,9 +1,7 @@
-# Optional aggregate-telemetry production profile. Use this complete site block
-# instead of openmermaid.caddy only for a PUBLIC_TELEMETRY_MODE=aggregate build.
-{$OPEN_MERMAID_SITE} {
-	encode zstd gzip
-	header Strict-Transport-Security "max-age=31536000"
+# Optional aggregate-telemetry production profile. Use this complete file
+# instead of openmermaid.caddy for PUBLIC_TELEMETRY_MODE=aggregate.
 
+(openmermaid_telemetry_routes) {
 	@telemetry_events {
 		method POST
 		path /api/telemetry/v1/template-uses
@@ -22,8 +20,6 @@
 			header_up -Authorization
 			header_up -Cookie
 			header_up -Referer
-			# An explicit empty value also suppresses Go's default
-			# "Go-http-client/1.1" user agent after the browser value is removed.
 			header_up User-Agent ""
 			header_up -Accept-Language
 			header_up -Sec-CH-*
@@ -99,6 +95,18 @@
 		}
 		respond 404
 	}
+}
+
+{$OPEN_MERMAID_SITE} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	import openmermaid_telemetry_routes
+
+	@editor_path path /editor /editor/*
+	redir @editor_path {$OPEN_MERMAID_EDITOR_ORIGIN}{uri} 308
+
+	@renderer_path path /renderer /renderer/*
+	respond @renderer_path 404
 
 	handle {
 		reverse_proxy {$OPEN_MERMAID_UPSTREAM:127.0.0.1:8088} {
@@ -109,5 +117,27 @@
 			health_fails 3
 			health_passes 2
 		}
+	}
+}
+
+{$OPEN_MERMAID_EDITOR_SITE} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	import openmermaid_telemetry_routes
+
+	@editor_assets path /editor /editor/* /renderer /renderer/* /_assets/* /favicon.svg /og-default.png /healthz
+	handle @editor_assets {
+		reverse_proxy {$OPEN_MERMAID_UPSTREAM:127.0.0.1:8088} {
+			health_uri /healthz
+			health_status 200
+			health_interval 10s
+			health_timeout 2s
+			health_fails 3
+			health_passes 2
+		}
+	}
+
+	handle {
+		respond 404
 	}
 }

@@ -65,12 +65,14 @@ Use design tokens, logical properties, container queries, system fonts, reduced-
 
 V1 is online-first and local-processing. It needs network access to load site assets, then persists documents locally. A service worker adds lifecycle, cache-invalidation, recovery, and security complexity and is deferred until explicit offline product requirements and tests exist.
 
-## ADR-010: Advertising primitives render nothing in v1
+## ADR-010: Advertising primitives render nothing in the initial v1
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-018
 - **Date:** 2026-07-21
 
-Define disabled `banner`, `content-rail`, and `editor-rail` layout primitives, but render no blank inventory, script, request, cookie, or reserved space. Future editor ads are allowed only in a fixed wide-screen rail from a separate-origin sandboxed iframe with no diagram source, URL fragment, editor DOM, or same-origin storage access.
+The initial v1 defined disabled placement seams that emitted nothing. They were removed when the
+agency-only model and its concrete route/origin boundary were accepted; retaining ambiguous banner
+and editor-rail placeholders would imply unsupported inventory.
 
 ## ADR-011: Future platform adapters depend on the core
 
@@ -143,3 +145,16 @@ template-application reports, not audited analytics, unique people, or every use
 This adapter does not supersede ADR-003 for documents, rendering, sharing, import, or export, and it
 does not change ADR-015: local Web Vitals remain local and are not sent to this collector. The
 portable static build remains the default deployment contract.
+
+## ADR-018: Agency advertising runs only on a storage-isolated public origin
+
+- **Status:** Accepted
+- **Date:** 2026-07-28
+
+Open Mermaid has no direct-sponsor mode. Approved agency tags may run only on substantive guide and
+template detail pages on the public-content hostname. The editor and renderer use a different
+hostname, and Caddy prevents public-content routes from being served on that editor hostname.
+Agency mode requires both origins, an indexed release, validated account/ad-unit identifiers, an
+auditable manifest, provider-compatible consent, route-specific CSP, and a byte-clean `off` build.
+The provider dashboard is authoritative for measurement. No agency code is permitted in the editor
+or shared document core.

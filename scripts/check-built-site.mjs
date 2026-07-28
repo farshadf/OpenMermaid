@@ -3,6 +3,8 @@ import path from 'node:path';
 
 const dist = new URL('../dist/', import.meta.url);
 const telemetryMode = process.env.PUBLIC_TELEMETRY_MODE ?? 'off';
+const adMode = process.env.PUBLIC_AD_MODE ?? 'off';
+const editorOriginConfigured = process.env.PUBLIC_EDITOR_ORIGIN !== undefined;
 const requiredFiles = [
   'index.html',
   'editor/index.html',
@@ -23,6 +25,9 @@ const requiredFiles = [
 const errors = [];
 if (!['off', 'aggregate'].includes(telemetryMode)) {
   errors.push('PUBLIC_TELEMETRY_MODE must be either "off" or "aggregate".');
+}
+if (!['off', 'placeholder', 'agency'].includes(adMode)) {
+  errors.push('PUBLIC_AD_MODE must be "off", "placeholder", or "agency".');
 }
 const aggregateTelemetryEnabled = telemetryMode === 'aggregate';
 
@@ -74,8 +79,11 @@ try {
     const sitemap = (
       await Promise.all(sitemapFiles.map((file) => readFile(new URL(file, dist), 'utf8')))
     ).join('\n');
-    if (!/<loc>[^<]+\/editor\/<\/loc>/u.test(sitemap)) {
+    if (!editorOriginConfigured && !/<loc>[^<]+\/editor\/<\/loc>/u.test(sitemap)) {
       errors.push('Generated sitemap is missing the standalone editor route.');
+    }
+    if (editorOriginConfigured && /<loc>[^<]+\/editor\/<\/loc>/u.test(sitemap)) {
+      errors.push('Public sitemap must not list the storage-isolated editor route.');
     }
     if (/<loc>[^<]+\/renderer\/<\/loc>/u.test(sitemap)) {
       errors.push('Generated sitemap must not expose the internal renderer route.');
@@ -161,6 +169,10 @@ async function checkInternalTarget(value, relative) {
 for (const file of pages) {
   const relative = path.relative(dist.pathname, file);
   const html = await readFile(file, 'utf8');
+  const agencyRoute =
+    adMode === 'agency' &&
+    (/^guides\/[^/]+\/index\.html$/u.test(relative) ||
+      /^templates\/[^/]+\/index\.html$/u.test(relative));
   if (
     !html.includes('<link rel="canonical"') &&
     relative !== 'renderer/index.html' &&
@@ -205,11 +217,12 @@ for (const file of pages) {
     )?.[1];
   if (csp === undefined) {
     errors.push(`${relative}: missing build-derived Content Security Policy`);
-  } else if (/script-src[^;]*'unsafe-inline'/iu.test(csp)) {
+  } else if (!agencyRoute && /script-src[^;]*'unsafe-inline'/iu.test(csp)) {
     errors.push(`${relative}: script-src must not allow arbitrary inline scripts`);
   } else {
-    const expectedConnection =
-      aggregateTelemetryEnabled && aggregateTelemetryConnectionRoutes.has(relative)
+    const expectedConnection = agencyRoute
+      ? 'https:'
+      : aggregateTelemetryEnabled && aggregateTelemetryConnectionRoutes.has(relative)
         ? "'self'"
         : "'none'";
     if (!new RegExp(`(?:^|;)\\s*connect-src\\s+${expectedConnection}(?:;|$)`, 'u').test(csp)) {

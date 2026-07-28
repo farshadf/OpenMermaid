@@ -7,6 +7,11 @@ const telemetryMode = process.env.PUBLIC_TELEMETRY_MODE ?? 'off';
 if (!['off', 'aggregate'].includes(telemetryMode)) {
   throw new Error('PUBLIC_TELEMETRY_MODE must be either "off" or "aggregate".');
 }
+const adMode = process.env.PUBLIC_AD_MODE ?? 'off';
+if (!['off', 'placeholder', 'agency'].includes(adMode)) {
+  throw new Error('PUBLIC_AD_MODE must be "off", "placeholder", or "agency".');
+}
+const editorOrigin = process.env.PUBLIC_EDITOR_ORIGIN;
 
 export default defineConfig({
   site,
@@ -15,7 +20,9 @@ export default defineConfig({
   integrations: [
     preact(),
     sitemap({
-      filter: (page) => !page.includes('/renderer/'),
+      filter: (page) =>
+        !page.includes('/renderer/') &&
+        !(editorOrigin !== undefined && page === new URL('/editor/', site).toString()),
     }),
   ],
   build: {

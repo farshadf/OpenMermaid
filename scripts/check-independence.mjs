@@ -4,8 +4,13 @@ import path from 'node:path';
 const root = new URL('../', import.meta.url);
 const packageJson = JSON.parse(await readFile(new URL('package.json', root), 'utf8'));
 const telemetryMode = process.env.PUBLIC_TELEMETRY_MODE ?? 'off';
+const adMode = process.env.PUBLIC_AD_MODE ?? 'off';
 if (!['off', 'aggregate'].includes(telemetryMode)) {
   console.error('PUBLIC_TELEMETRY_MODE must be either "off" or "aggregate".');
+  process.exit(1);
+}
+if (!['off', 'placeholder', 'agency'].includes(adMode)) {
+  console.error('PUBLIC_AD_MODE must be "off", "placeholder", or "agency".');
   process.exit(1);
 }
 const productionDependencies = Object.keys(packageJson.dependencies ?? {});
@@ -117,6 +122,14 @@ for (const file of builtFiles) {
   ) {
     errors.push(`dist/${relative}: telemetry code appeared in the telemetry-off artifact`);
   }
+  if (
+    adMode === 'off' &&
+    /(?:pagead2\.googlesyndication\.com|data-ad-provider|data-ad-placement|adsbygoogle)/iu.test(
+      contents,
+    )
+  ) {
+    errors.push(`dist/${relative}: advertising code appeared in the ad-off artifact`);
+  }
   if (/navigator\.serviceWorker|serviceWorker\.register/iu.test(contents)) {
     errors.push(`dist/${relative}: contains service worker registration`);
   }
@@ -151,7 +164,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  telemetryMode === 'off'
-    ? `Standalone independence verified across source and ${String(builtFiles.length)} built files: no ChatGPT/OpenAI/MCP coupling, external runtime assets, third-party analytics, outbound telemetry, ads, or service worker.`
-    : `Standalone independence verified across source and ${String(builtFiles.length)} built files: optional first-party aggregate telemetry is isolated from the shared core, with no ChatGPT/OpenAI/MCP coupling, external runtime assets, third-party analytics, ads, or service worker.`,
+  `Standalone independence verified across source and ${String(builtFiles.length)} built files: no ChatGPT/OpenAI/MCP coupling or service worker; telemetry mode is ${telemetryMode} and advertising mode is ${adMode}.`,
 );

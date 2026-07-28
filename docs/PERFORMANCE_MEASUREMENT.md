@@ -25,6 +25,13 @@ The `/performance/` page loads the pinned official `web-vitals` package after pr
 
 History is **off by default**. Current-visit readings on `/performance/` are ephemeral unless the user explicitly enables “Save 30-day history in this browser.” No consent banner is needed for the default because no metric is persisted or transmitted; enabling history is an explicit local preference, not permission to send data anywhere.
 
+Agency-enabled guide/template detail pages form a separate performance cohort. They intentionally
+omit the local Web Vitals bootstrap, so no Open Mermaid performance identifier or measurement is
+available to agency code. Measure them with isolated Lighthouse/WebPageTest runs and aggregate CrUX
+evidence for the public origin. Compare ad-off, blocked, no-fill, consent-pending, restricted, and
+filled cases; record provider transfer, request count, long tasks, console errors, and
+ad-attributed layout-shift entries separately from the editor.
+
 Persisted `LocalVitalSampleV1` records contain only:
 
 - metric ID, name, numeric value, and rating;

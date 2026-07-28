@@ -1,11 +1,13 @@
 ---
 import Breadcrumbs from '../../components/static/Breadcrumbs.astro';
+import AgencyAdSlot from '../../components/advertising/AgencyAdSlot.astro';
 import SourceBlock from '../../components/static/SourceBlock.astro';
 import StaticDiagramExample from '../../components/static/StaticDiagramExample.astro';
 import TemplateCard from '../../components/static/TemplateCard.astro';
 import { guides, type DiagramGuide } from '../../data/guides';
 import { diagramTemplates } from '../../data/templates';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { editorHref } from '../../lib/site/origins';
 
 export function getStaticPaths() {
   return guides.map((guide) => ({
@@ -48,6 +50,7 @@ const jsonLd = {
   pageType="article"
   jsonLd={jsonLd}
   breadcrumbs={breadcrumbs}
+  agencyEligible={true}
 >
   <div class="shell">
     <Breadcrumbs items={breadcrumbs} />
@@ -74,26 +77,29 @@ const jsonLd = {
           guide ships no Mermaid or editor JavaScript. Open it in the editor for live feedback.
         </p>
         <div class="button-row">
-          <a class="button" href="/editor/">Try it in the editor</a>
+          <a class="button" href={editorHref()}>Try it in the editor</a>
           <a class="button-secondary" href="/templates/">Browse templates</a>
         </div>
       </section>
 
       {
         guide.sections.map((section, index) => (
-          <section aria-labelledby={`${guide.slug}-section-${String(index)}`}>
-            <h2 id={`${guide.slug}-section-${String(index)}`}>{section.heading}</h2>
-            {section.paragraphs.map((paragraph) => (
-              <p>{paragraph}</p>
-            ))}
-            {section.bullets && (
-              <ul>
-                {section.bullets.map((bullet) => (
-                  <li>{bullet}</li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <>
+            <section aria-labelledby={`${guide.slug}-section-${String(index)}`}>
+              <h2 id={`${guide.slug}-section-${String(index)}`}>{section.heading}</h2>
+              {section.paragraphs.map((paragraph) => (
+                <p>{paragraph}</p>
+              ))}
+              {section.bullets && (
+                <ul>
+                  {section.bullets.map((bullet) => (
+                    <li>{bullet}</li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            {index === 0 && <AgencyAdSlot routeKind="guide-detail" />}
+          </>
         ))
       }
 

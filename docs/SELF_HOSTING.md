@@ -173,10 +173,12 @@ For an existing Caddy installation, keep site snippets in a directory imported b
 import /etc/caddy/sites/*.caddy
 ```
 
-Install the repository snippet as `/etc/caddy/sites/openmermaid.caddy`. It reads two non-secret service environment values:
+Install the repository snippet as `/etc/caddy/sites/openmermaid.caddy`. It reads four non-secret service environment values:
 
 ```dotenv
 OPEN_MERMAID_SITE=openmermaid.example
+OPEN_MERMAID_EDITOR_SITE=app.openmermaid.example
+OPEN_MERMAID_EDITOR_ORIGIN=https://app.openmermaid.example
 OPEN_MERMAID_UPSTREAM=127.0.0.1:8088
 ```
 
@@ -187,13 +189,20 @@ Store those values in `/etc/openmermaid/caddy.env` with root ownership and mode 
 EnvironmentFile=/etc/openmermaid/caddy.env
 ```
 
-Use the final hostname, without an `http://` scheme, for production. A hostname site address enables Caddy's automatic HTTPS and HTTP-to-HTTPS redirects. The repository template has no hostname default, so validation fails closed when the variable is absent.
+Use the final hostnames, without an `http://` scheme, for production. They must be different. The
+public hostname serves crawlable content and any agency inventory; the editor hostname serves only
+the editor, renderer, and required local assets. This prevents agency JavaScript from sharing the
+origin authority of editor IndexedDB. Hostname site addresses enable Caddy's automatic HTTPS and
+HTTP-to-HTTPS redirects. The repository template has no hostname defaults, so validation fails
+closed when either variable is absent.
 
 Validate the complete configuration with the production values before any reload:
 
 ```bash
 sudo env \
   OPEN_MERMAID_SITE=openmermaid.example \
+  OPEN_MERMAID_EDITOR_SITE=app.openmermaid.example \
+  OPEN_MERMAID_EDITOR_ORIGIN=https://app.openmermaid.example \
   OPEN_MERMAID_UPSTREAM=127.0.0.1:8088 \
   caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
@@ -203,7 +212,12 @@ sudo systemctl reload caddy
 
 For a newly installed service that is not running, use `sudo systemctl enable --now caddy` only after validation. Caddy reloads configuration gracefully; restarting a healthy shared edge is unnecessary for routine Open Mermaid updates.
 
-The production snippet enables zstd/gzip, adds production-only HSTS, and actively checks `/healthz`. It does not duplicate the build-derived script/style CSP. Multiple CSP policies are intersected by browsers, so a stale handwritten hash list can break a correct release. The inner server supplies the tested main and renderer response policies, and Caddy passes them through.
+The production snippet enables zstd/gzip, adds production-only HSTS, and actively checks `/healthz`.
+It redirects public `/editor/` requests to the editor hostname, rejects the renderer on the public
+hostname, and rejects public-content routes on the editor hostname. It does not duplicate the
+build-derived script/style CSP. Multiple CSP policies are intersected by browsers, so a stale
+handwritten hash list can break a correct release. The inner server supplies the tested main and
+renderer response policies, and Caddy passes them through.
 
 Do not use the production snippet for a preview hostname: previews require a separate site block, `PUBLIC_INDEX_SITE=false`, `X-Robots-Tag: noindex, nofollow`, access control when appropriate, and no HSTS. Do not add `includeSubDomains` or `preload` to HSTS without a separate audit of every affected hostname.
 
@@ -219,11 +233,16 @@ Run these checks against the actual public origin, not only loopback:
 
 ```bash
 export OPEN_MERMAID_ORIGIN=https://openmermaid.example
+export OPEN_MERMAID_EDITOR_ORIGIN=https://app.openmermaid.example
 
 curl --fail --silent --show-error --head "$OPEN_MERMAID_ORIGIN/"
 curl --fail --silent --show-error --head "$OPEN_MERMAID_ORIGIN/editor/"
 curl --fail --silent --show-error --head "$OPEN_MERMAID_ORIGIN/renderer/"
 curl --fail --silent --show-error --head "$OPEN_MERMAID_ORIGIN/renderer/runtime.js"
+curl --fail --silent --show-error --head "$OPEN_MERMAID_EDITOR_ORIGIN/editor/"
+curl --fail --silent --show-error --head "$OPEN_MERMAID_EDITOR_ORIGIN/renderer/"
+curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
+  "$OPEN_MERMAID_EDITOR_ORIGIN/guides/flowcharts/"
 curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
   "$OPEN_MERMAID_ORIGIN/not-a-real-route"
 ```
@@ -231,7 +250,10 @@ curl --silent --show-error --output /dev/null --write-out '%{http_code}\n' \
 Confirm all of the following:
 
 - HTTP redirects once to the canonical HTTPS URL, preserving path and query.
-- The certificate is valid for the canonical host and all configured aliases.
+- Public `/editor/` redirects to the editor hostname; public `/renderer/` returns 404.
+- The editor hostname serves `/editor/` and `/renderer/` but returns 404 for public guide/template
+  pages, so agency code cannot execute with editor-origin storage authority.
+- The certificate is valid for the public host, editor host, and all configured aliases.
 - Main responses contain the response-only framing CSP, HSTS, referrer, permissions, nosniff, framing, COOP, and CORP policies exactly as documented.
 - Renderer responses use the narrower renderer policy and can load only the local stable runtime.
 - `/_assets/*` is immutable; HTML, renderer files, policies, and 404 responses revalidate.

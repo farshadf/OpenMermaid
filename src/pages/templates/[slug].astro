@@ -1,11 +1,13 @@
 ---
 import Breadcrumbs from '../../components/static/Breadcrumbs.astro';
+import AgencyAdSlot from '../../components/advertising/AgencyAdSlot.astro';
 import DiagramTypeBadge from '../../components/static/DiagramTypeBadge.astro';
 import SourceBlock from '../../components/static/SourceBlock.astro';
 import StaticDiagramExample from '../../components/static/StaticDiagramExample.astro';
 import { getGuide } from '../../data/guides';
 import { diagramTemplates, type DiagramTemplate } from '../../data/templates';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { editorHref } from '../../lib/site/origins';
 
 export function getStaticPaths() {
   return diagramTemplates.map((template) => ({
@@ -80,6 +82,7 @@ const jsonLd = {
   pageType="article"
   jsonLd={jsonLd}
   breadcrumbs={breadcrumbs}
+  agencyEligible={true}
 >
   <div class="shell">
     <Breadcrumbs items={breadcrumbs} />
@@ -123,8 +126,8 @@ const jsonLd = {
           <h2 id="source-heading">Mermaid source</h2>
           <SourceBlock source={template.source} label={`Source for ${template.name}`} />
           <div class="button-row">
-            <a class="button" href={`/editor/?template=${template.slug}`}>Use this template</a>
-            <a class="button-secondary" href="/editor/">Open a blank editor</a>
+            <a class="button" href={editorHref(`?template=${template.slug}`)}>Use this template</a>
+            <a class="button-secondary" href={editorHref()}>Open a blank editor</a>
           </div>
         </section>
 
@@ -137,6 +140,8 @@ const jsonLd = {
             answer the diagram’s question.
           </p>
         </section>
+
+        <AgencyAdSlot routeKind="template-detail" />
 
         <section aria-labelledby="errors-heading">
           <h2 id="errors-heading">Common errors</h2>

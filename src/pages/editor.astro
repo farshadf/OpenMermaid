@@ -3,10 +3,11 @@ import { EditorApp } from '../features/editor/EditorApp';
 import VitalsBootstrap from '../components/performance/VitalsBootstrap.astro';
 import TelemetryBootstrap from '../components/telemetry/TelemetryBootstrap.astro';
 import '../styles/editor.css';
+import { editorSiteOrigin, publicHref } from '../lib/site/origins';
 
 export const prerender = true;
 
-const siteOrigin = Astro.site ?? new URL(Astro.url.origin);
+const siteOrigin = new URL(editorSiteOrigin ?? Astro.site ?? Astro.url.origin);
 const canonical = new URL('/editor/', siteOrigin).toString();
 const description =
   'Create, validate, save, share, and export Mermaid diagrams locally in your browser with Open Mermaid.';
@@ -72,7 +73,7 @@ const structuredData = JSON.stringify({
           <h1>JavaScript is required for the editor</h1>
           <p>
             Open Mermaid processes diagrams locally in your browser. Enable JavaScript to use the
-            editor, or browse the <a href="/guides/">static guides</a>.
+            editor, or browse the <a href={publicHref('/guides/')}>static guides</a>.
           </p>
         </div>
       </main>

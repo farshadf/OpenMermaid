@@ -4,8 +4,12 @@ import path from 'node:path';
 
 const dist = new URL('../dist/', import.meta.url);
 const telemetryMode = process.env.PUBLIC_TELEMETRY_MODE ?? 'off';
+const adMode = process.env.PUBLIC_AD_MODE ?? 'off';
 if (!['off', 'aggregate'].includes(telemetryMode)) {
   throw new Error('PUBLIC_TELEMETRY_MODE must be either "off" or "aggregate".');
+}
+if (!['off', 'placeholder', 'agency'].includes(adMode)) {
+  throw new Error('PUBLIC_AD_MODE must be "off", "placeholder", or "agency".');
 }
 
 async function htmlFiles(directory) {
@@ -48,6 +52,30 @@ function policyFor(html, relative) {
       "frame-src 'none'",
       "worker-src 'none'",
       "media-src 'none'",
+      "object-src 'none'",
+      "manifest-src 'none'",
+      "base-uri 'none'",
+      "form-action 'none'",
+    ].join('; ');
+  }
+  if (
+    adMode === 'agency' &&
+    html.includes('data-ad-provider="google-adsense"') &&
+    html.includes('data-ad-placement="content-stripe"')
+  ) {
+    return [
+      "default-src 'none'",
+      `script-src 'strict-dynamic' 'unsafe-inline' 'unsafe-eval' ${hashes.join(' ')} https: http:`.trim(),
+      "script-src-attr 'none'",
+      "style-src 'self' 'unsafe-inline'",
+      "style-src-elem 'self' 'unsafe-inline'",
+      "style-src-attr 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      'font-src data: https:',
+      'connect-src https:',
+      'frame-src https:',
+      'worker-src blob: https:',
+      'media-src https:',
       "object-src 'none'",
       "manifest-src 'none'",
       "base-uri 'none'",

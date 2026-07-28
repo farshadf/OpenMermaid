@@ -42,9 +42,9 @@ A public release requires evidence for every applicable item. “Not tested” i
 - [ ] Renderer iframe has exactly the intended sandbox flags and protocol validation.
 - [ ] Exported SVG contains only sanitized output; PNG dimensions/backgrounds match selection and bounds.
 - [ ] Fragment round trips, malformed/future envelopes, character rejection, decompression bombs, and URL limits pass.
-- [ ] No general-purpose analytics, session replay, identity tracking, ad provider, remote font,
+- [ ] No general-purpose analytics, session replay, Open Mermaid identity tracking, remote font,
       runtime CDN, service worker, AI, ChatGPT, MCP, account, or cloud code appears in network or
-      built dependencies.
+      built dependencies. Agency code is present only in an explicitly approved agency artifact.
 - [ ] The default telemetry-off artifact contains no telemetry bootstrap, request, queue, preference
       storage, or relaxed `connect-src` policy.
 - [ ] The aggregate artifact transmits only the strict allowlisted template-use schema after
@@ -55,6 +55,16 @@ A public release requires evidence for every applicable item. “Not tested” i
 - [ ] Collector tests cover exact keys, allowlisted slugs, body/batch bounds, method, content type,
       origin rejection, retry deduplication, retention, thresholding, rounding, cache behavior, and
       zero raw-event storage.
+- [ ] Ad-off output contains no advertising markup, CSS, bootstrap, manifest, request, storage, or
+      CSP relaxation; placeholder output is noindexed and inert.
+- [ ] If agency mode is enabled, the provider account/site, CMP, privacy notice, vendor inventory,
+      `/ads.txt`, consent withdrawal, restricted-serving behavior, and reporting access are
+      approved and current.
+- [ ] Agency inventory is limited to one content stripe on guide/template detail pages; no provider
+      code or request appears on the editor, renderer, fragment shares, homepage, indexes, policies,
+      performance diagnostics, or 404.
+- [ ] `PUBLIC_SITE_URL` and `PUBLIC_EDITOR_ORIGIN` use different hostnames, cookies are host-only,
+      and canary request capture proves no diagram/editor/product-telemetry data reaches the agency.
 - [ ] Local clear, storage failure, delete undo, and multi-tab conflicts have reviewed recovery paths.
 
 ## Accessibility and compatibility
@@ -79,6 +89,8 @@ A public release requires evidence for every applicable item. “Not tested” i
 - [ ] `/performance/` is local-only, history defaults off, clear/export work, and no performance
       telemetry request occurs.
 - [ ] The canonical-origin CrUX history workflow is configured or explicitly deferred; missing launch traffic is informational.
+- [ ] Agency-enabled pages have their own Lighthouse/Web Vitals cohort, zero unexpected
+      ad-attributed CLS, stable no-fill/outage layout, one request cycle, and no refresh.
 - [ ] `llms.txt` is accurate, supplemental, and makes no ranking claim.
 
 ## Deployment and rollback
@@ -95,6 +107,8 @@ A public release requires evidence for every applicable item. “Not tested” i
 - [ ] CI produced a collector container SBOM and the high-severity collector vulnerability scan
       passed.
 - [ ] The complete host Caddyfile validates before reload; the existing public edge and unrelated sites are preserved.
+- [ ] Public `/editor/` redirects to the editor hostname, public `/renderer/` is unavailable, and
+      the editor hostname rejects public content routes that contain agency code.
 - [ ] Caddy automatic HTTPS, canonical alias redirects, dynamic compression, HSTS scope, active `/healthz` checks, and loopback upstream are verified on the final host.
 - [ ] HTTPS redirect, MIME types, main CSP, renderer CSP, permissions, referrer, framing, HSTS decision, and caching are verified on the final origin.
 - [ ] Real 404 returns status 404 and noindex.
