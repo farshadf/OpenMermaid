@@ -1,120 +1,448 @@
 ---
 import Breadcrumbs from '../../components/static/Breadcrumbs.astro';
 import TemplateCard from '../../components/static/TemplateCard.astro';
-import { diagramTemplates, stableTemplates } from '../../data/templates';
+import {
+  diagramTemplates,
+  stableTemplates,
+  templateCategoryLabels,
+  templateCategoryOrder,
+  type DiagramMaturity,
+  type TemplateKind,
+} from '../../data/templates';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const breadcrumbs = [
   { href: '/', label: 'Home' },
   { href: '/templates/', label: 'Templates' },
 ] as const;
+const maturityLabels: Readonly<Record<DiagramMaturity, string>> = {
+  stable: 'Stable',
+  beta: 'Beta',
+  experimental: 'Experimental',
+};
+const maturityOrder: readonly DiagramMaturity[] = ['stable', 'beta', 'experimental'];
+const kindLabels: Readonly<Record<TemplateKind, string>> = {
+  starter: 'Starters',
+  recipe: 'Task recipes',
+};
+const kindOrder: readonly TemplateKind[] = ['starter', 'recipe'];
+const countBy = <T extends string>(values: readonly T[], candidate: T): number =>
+  values.filter((value) => value === candidate).length;
+const categoryValues = diagramTemplates.map((template) => template.category);
+const maturityValues = diagramTemplates.map((template) => template.maturity);
+const kindValues = diagramTemplates.map((template) => template.kind);
+const orderedTemplates = [...diagramTemplates].sort(
+  (left, right) => left.recommendedRank - right.recommendedRank,
+);
+const groupedTemplates = templateCategoryOrder.map((category) => ({
+  value: category,
+  label: templateCategoryLabels[category],
+  templates: orderedTemplates.filter((template) => template.category === category),
+}));
+const displayedTemplates = groupedTemplates.flatMap((group) => group.templates);
+const directiveAliasesBySlug: Readonly<Record<string, readonly string[]>> = {
+  'flowchart-starter': ['graph', 'flowchart-elk'],
+  'class-starter': ['classDiagram-v2'],
+  'state-starter': ['stateDiagram'],
+  'incident-triage-recipe': ['graph'],
+  'release-gate-recipe': ['stateDiagram'],
+  'sankey-starter': ['sankey-beta'],
+  'xychart-starter': ['xychart-beta'],
+  'block-starter': ['block-beta'],
+  'packet-starter': ['packet-beta'],
+  'c4-starter': ['C4Container', 'C4Component', 'C4Dynamic', 'C4Deployment'],
+};
+const sourceDirective = (source: string): string => source.trimStart().split(/\s/u, 1)[0] ?? '';
+const canonicalUrl = new URL('/templates/', Astro.site).toString();
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Mermaid diagram template catalogue',
+  description: 'A searchable catalogue of maintained Mermaid diagram starters and task recipes.',
+  url: canonicalUrl,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: orderedTemplates.length,
+    itemListElement: displayedTemplates.map((template, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: template.name,
+      url: new URL(`/templates/${template.slug}/`, Astro.site).toString(),
+    })),
+  },
+};
 ---
 
 <BaseLayout
-  title="Mermaid diagram templates"
-  description="Start with maintained Mermaid templates for flowcharts, sequence diagrams, class models, charts, architecture, and every diagram family in the pinned release."
+  title="Mermaid diagram template catalogue"
+  description="Search, filter, sort, and browse maintained Mermaid templates for every diagram family supported by Open Mermaid’s pinned release."
   canonicalPath="/templates/"
+  jsonLd={jsonLd}
   breadcrumbs={breadcrumbs}
 >
-  <div class="shell">
+  <div class="shell template-catalogue" data-template-catalogue>
     <Breadcrumbs items={breadcrumbs} />
     <header class="page-hero page-hero--compact">
-      <p class="eyebrow">Maintained source, not screenshots</p>
+      <p class="eyebrow">A complete, maintained catalogue</p>
       <h1>Mermaid diagram templates</h1>
       <p class="lede">
-        Choose a working starter, understand when to use it, and open the source in the local
-        editor. Upstream beta and experimental grammars are clearly labeled.
+        Find the right starting point by task, diagram maturity, or template kind. Every card
+        includes a source-faithful thumbnail generated and sanitized at release time.
       </p>
       <p class="filter-note">
-        {stableTemplates.length} stable starters and recipes plus {
+        {diagramTemplates.length} templates cover every diagram family in the pinned Mermaid release:{
+          ' '
+        }
+        {stableTemplates.length} stable templates and {
           diagramTemplates.length - stableTemplates.length
-        } labeled early-maturity starters cover the diagram families documented by the pinned Mermaid
-        release.
+        } clearly labeled early-maturity templates.
       </p>
     </header>
 
-    <form class="template-search" role="search" data-template-search>
-      <label for="template-query">Search templates</label>
-      <input
-        id="template-query"
-        name="q"
-        type="search"
-        inputmode="search"
-        autocomplete="off"
-        placeholder="Try flowchart, API, database…"
-        aria-describedby="template-results"
-      />
-      <p id="template-results" class="muted" aria-live="polite">
-        Showing all {diagramTemplates.length} templates.
+    <noscript>
+      <style>
+        .catalogue-controls {
+          display: none;
+        }
+      </style>
+      <p class="callout">
+        Search, filtering, sorting, and regrouping need JavaScript. The complete {
+          diagramTemplates.length
+        }-template catalogue remains available below, grouped by category.
       </p>
+    </noscript>
+
+    <form class="catalogue-controls" role="search" data-template-controls>
+      <div class="catalogue-search">
+        <label for="template-query">Search the catalogue</label>
+        <input
+          id="template-query"
+          name="q"
+          type="search"
+          inputmode="search"
+          autocomplete="off"
+          maxlength="120"
+          placeholder="Try API retry, database, planning…"
+          aria-controls="template-catalogue-results"
+          aria-describedby="template-search-help template-results"
+        />
+        <p id="template-search-help" class="muted">
+          Add more words to narrow results. Every word must match.
+        </p>
+      </div>
+
+      <div class="catalogue-filters">
+        <fieldset>
+          <legend>Category</legend>
+          {
+            templateCategoryOrder.map((category) => (
+              <label>
+                <input type="checkbox" name="category" value={category} />
+                <span>{templateCategoryLabels[category]}</span>
+                <span class="facet-count">{countBy(categoryValues, category)}</span>
+              </label>
+            ))
+          }
+        </fieldset>
+
+        <fieldset>
+          <legend>Maturity</legend>
+          {
+            maturityOrder.map((maturity) => (
+              <label>
+                <input type="checkbox" name="maturity" value={maturity} />
+                <span>{maturityLabels[maturity]}</span>
+                <span class="facet-count">{countBy(maturityValues, maturity)}</span>
+              </label>
+            ))
+          }
+        </fieldset>
+
+        <fieldset>
+          <legend>Template kind</legend>
+          {
+            kindOrder.map((kind) => (
+              <label>
+                <input type="checkbox" name="kind" value={kind} />
+                <span>{kindLabels[kind]}</span>
+                <span class="facet-count">{countBy(kindValues, kind)}</span>
+              </label>
+            ))
+          }
+        </fieldset>
+      </div>
+
+      <div class="catalogue-view-controls">
+        <label>
+          <span>Sort by</span>
+          <select name="sort" data-template-sort>
+            <option value="recommended">Recommended</option>
+            <option value="name">Name</option>
+          </select>
+        </label>
+        <label>
+          <span>Group by</span>
+          <select name="group">
+            <option value="category">Category</option>
+            <option value="maturity">Maturity</option>
+            <option value="kind">Template kind</option>
+            <option value="none">No grouping</option>
+          </select>
+        </label>
+        <button class="button-secondary catalogue-clear" type="button" data-template-clear>
+          Clear all
+        </button>
+      </div>
     </form>
 
-    <div class="resource-grid" data-template-grid>
+    <div class="catalogue-summary">
+      <p id="template-results" aria-live="polite">
+        Showing all {diagramTemplates.length} templates.
+      </p>
+      <p class="muted" data-template-usage-note hidden>
+        Reported-use values are privacy-preserving rounded lower bounds from opted-in reports, not
+        exact people, verified demand, or total usage.{' '}
+        <a href="/privacy/">Review the privacy and sharing control.</a>
+        <span data-template-usage-date></span>
+      </p>
+    </div>
+
+    <div id="template-catalogue-results" data-template-results>
       {
-        diagramTemplates.map((template) => (
-          <div
-            data-template-card
-            data-search={`${template.name} ${template.diagramType} ${template.summary} ${template.keywords.join(' ')}`.toLocaleLowerCase()}
-          >
-            <TemplateCard template={template} />
-          </div>
+        groupedTemplates.map((group) => (
+          <section class="catalogue-group" data-template-group={group.value}>
+            <div class="catalogue-group__heading">
+              <h2>{group.label}</h2>
+              <span>{group.templates.length}</span>
+            </div>
+            <div class="catalogue-grid">
+              {group.templates.map((template) => (
+                <div
+                  data-template-card
+                  data-slug={template.slug}
+                  data-name={template.name}
+                  data-category={template.category}
+                  data-maturity={template.maturity}
+                  data-kind={template.kind}
+                  data-rank={template.recommendedRank}
+                  data-search={[
+                    template.name,
+                    template.diagramType,
+                    template.summary,
+                    template.useWhen,
+                    template.keywords.join(' '),
+                    sourceDirective(template.source),
+                    ...(directiveAliasesBySlug[template.slug] ?? []),
+                    templateCategoryLabels[template.category],
+                    template.maturity,
+                    template.kind,
+                  ].join(' ')}
+                >
+                  <TemplateCard template={template} headingLevel={3} showThumbnail={true} />
+                </div>
+              ))}
+            </div>
+          </section>
         ))
       }
     </div>
 
-    <p class="no-results" data-no-results hidden>
-      No template matches that search. Try a diagram family or task such as “sequence”, “database”,
-      or “planning”.
-    </p>
-
-    <noscript>
-      <p class="callout">
-        Search needs JavaScript, but every template remains available in the list above.
+    <section class="no-results" data-no-results hidden>
+      <h2>No matching templates</h2>
+      <p>
+        Try fewer search words, remove a filter, or search for a task such as “database”,
+        “planning”, or “API”.
       </p>
-    </noscript>
+      <button class="button-secondary" type="button" data-template-clear>Clear all filters</button>
+    </section>
   </div>
 </BaseLayout>
 
-<script is:inline type="module" src="/scripts/template-search.js"></script>
+<script>
+  import '../../scripts/template-catalogue';
+</script>
 
-<style>
-  .template-search {
-    max-inline-size: 38rem;
-    margin-block-end: 2rem;
+<style is:global>
+  .template-catalogue {
+    padding-block-end: var(--space-6);
   }
 
-  .template-search label {
+  .catalogue-controls {
+    margin-block-end: var(--space-4);
+    padding: clamp(1rem, 3vw, 1.5rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  .catalogue-search {
+    max-inline-size: 46rem;
+  }
+
+  .catalogue-search label,
+  .catalogue-view-controls label > span {
     display: block;
     margin-block-end: 0.4rem;
-    font-weight: 740;
+    font-weight: 760;
   }
 
-  .template-search input {
+  .catalogue-search input,
+  .catalogue-view-controls select {
     inline-size: 100%;
-    min-block-size: 3rem;
-    padding: 0.7rem 0.9rem;
+    min-block-size: 2.8rem;
+    padding: 0.62rem 0.75rem;
     color: var(--color-text);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--color-surface);
+    background: var(--color-canvas);
     font: inherit;
   }
 
-  .template-search p {
-    margin-block-start: 0.4rem;
+  .catalogue-search p {
+    margin-block: 0.35rem 0;
+    font-size: 0.88rem;
+  }
+
+  .catalogue-filters {
+    display: grid;
+    grid-template-columns: minmax(15rem, 1.6fr) repeat(2, minmax(10rem, 1fr));
+    gap: var(--space-4);
+    margin-block-start: var(--space-4);
+  }
+
+  .catalogue-filters fieldset {
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .catalogue-filters legend {
+    margin-block-end: 0.5rem;
+    font-weight: 780;
+  }
+
+  .catalogue-filters label {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.55rem;
+    min-block-size: 2.15rem;
+    cursor: pointer;
+  }
+
+  .catalogue-filters input {
+    inline-size: 1rem;
+    block-size: 1rem;
+    accent-color: var(--color-brand);
+  }
+
+  .facet-count {
+    min-inline-size: 1.9rem;
+    padding-inline: 0.35rem;
+    color: var(--color-muted);
+    border-radius: 999px;
+    background: var(--color-surface-raised);
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  .catalogue-view-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(10rem, 14rem)) auto;
+    align-items: end;
+    gap: var(--space-3);
+    margin-block-start: var(--space-4);
+    padding-block-start: var(--space-4);
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .catalogue-clear {
+    min-block-size: 2.8rem;
+  }
+
+  .catalogue-summary {
+    margin-block-end: var(--space-4);
+  }
+
+  .catalogue-summary p {
+    margin-block: 0.2rem;
+  }
+
+  .catalogue-group + .catalogue-group {
+    margin-block-start: var(--space-6);
+  }
+
+  .catalogue-group__heading {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+    margin-block-end: var(--space-3);
+    padding-block-end: 0.65rem;
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .catalogue-group__heading h2 {
+    margin: 0;
+    font-size: clamp(1.35rem, 3vw, 1.75rem);
+  }
+
+  .catalogue-group__heading span {
+    min-inline-size: 2rem;
+    padding: 0.08rem 0.45rem;
+    color: var(--color-muted);
+    border-radius: 999px;
+    background: var(--color-surface-raised);
+    font-size: 0.8rem;
+    font-weight: 750;
+    text-align: center;
+  }
+
+  .catalogue-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    align-items: stretch;
+    gap: var(--space-3);
   }
 
   [data-template-card] {
-    display: contents;
+    min-inline-size: 0;
   }
 
-  [data-template-card][hidden] {
-    display: none;
+  [data-template-card] > .template-card {
+    block-size: 100%;
   }
 
   .no-results {
-    padding: 1.25rem;
+    padding: clamp(1.25rem, 4vw, 2rem);
     border: 1px dashed var(--color-border);
     border-radius: var(--radius-md);
+    background: var(--color-surface);
+    text-align: center;
+  }
+
+  @media (max-width: 48rem) {
+    .catalogue-filters {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .catalogue-filters fieldset:first-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 34rem) {
+    .catalogue-filters,
+    .catalogue-view-controls {
+      grid-template-columns: 1fr;
+    }
+
+    .catalogue-filters fieldset:first-child {
+      grid-column: auto;
+    }
+
+    .catalogue-clear {
+      inline-size: 100%;
+    }
   }
 </style>

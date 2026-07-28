@@ -1,7 +1,7 @@
 import { defaultHighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
 import type { StreamParser, StringStream } from '@codemirror/language';
 
-import { mermaidDirectiveKeywords } from './catalog';
+import { mermaidDirectiveKeywords } from './directives';
 
 interface MermaidLanguageState {
   inFrontmatter: boolean;

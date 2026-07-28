@@ -4,7 +4,7 @@ The repository ships a `_headers` example suitable for Netlify and Cloudflare Pa
 
 ## Build-derived main application CSP
 
-After Astro builds the static site, `scripts/inject-csp.mjs` adds a Content Security Policy meta tag to each HTML document. It calculates SHA-256 hashes for the exact inline scripts in that artifact, including page-specific structured data and the editor hydration bootstrap. The policy uses this baseline plus generated hashes:
+After Astro builds the static site, `scripts/inject-csp.mjs` adds a Content Security Policy meta tag to each HTML document. It calculates SHA-256 hashes for the exact inline scripts in that artifact, including page-specific structured data and the editor hydration bootstrap. The default `PUBLIC_TELEMETRY_MODE=off` artifact uses this baseline plus generated hashes:
 
 ```text
 default-src 'none'; script-src 'self' <build hashes>; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; style-src-elem 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob:; font-src 'none'; connect-src 'none'; frame-src 'self'; worker-src 'none'; media-src 'none'; object-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'
@@ -25,14 +25,30 @@ Cross-Origin-Resource-Policy: same-origin
 
 Why each CSP allowance exists:
 
-- `script-src 'self'` plus generated hashes permits built modules and the exact trusted inline blocks; it does not permit eval, arbitrary inline JavaScript, a runtime CDN, analytics, ads, or remote application code.
+- `script-src 'self'` plus generated hashes permits built modules and the exact trusted inline blocks;
+  it does not permit eval, arbitrary inline JavaScript, a runtime CDN, third-party analytics, ads,
+  or remote application code.
 - `script-src-attr 'none'` blocks inline event handlers even though trusted inline script elements have exact hashes.
 - The style directives permit extracted CSS, CodeMirror's deterministic runtime style element, the resizable-pane style property, and inline Mermaid styles inside the isolated preview. Scripts remain hash-restricted. Remote styles and font CDNs remain blocked.
 - `img-src 'self' data: blob:` supports repository assets and local generated preview/export URLs.
-- `connect-src 'none'` prevents fetch/XHR/WebSocket destinations; static modules and navigation are governed separately.
+- In the default artifact, `connect-src 'none'` prevents fetch/XHR/WebSocket destinations; static
+  modules and navigation are governed separately.
 - `frame-src 'self'` permits the application-owned renderer only.
 - workers, media, plugins, injected base URLs, and cross-origin forms are not needed.
 - The response-only `frame-ancestors 'self'` directive and `X-Frame-Options` prevent third-party framing. CSP meta tags cannot enforce `frame-ancestors`. A future ChatGPT widget is a separate deployment with its own reviewed framing policy.
+
+### Optional aggregate telemetry policy
+
+An explicit `PUBLIC_TELEMETRY_MODE=aggregate` build changes `connect-src` to `'self'` only on
+`/editor/` and `/templates/`, the two routes that can report a template application or load the
+public coarsened count snapshot. Every other route retains `connect-src 'none'`, and the renderer
+always retains `connect-src 'none'`.
+
+`'self'` is intentionally narrower than an operator-configured URL list: Caddy exposes the
+collector through exact same-origin paths, so the browser policy never authorizes a third-party
+analytics origin. This mode is a distinct release artifact and must pass both the aggregate-mode
+network contract and the ordinary malicious-input tests. Do not relax `connect-src` globally or
+add a wildcard to accommodate the collector.
 
 ## Renderer policy
 

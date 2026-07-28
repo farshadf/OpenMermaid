@@ -15,16 +15,18 @@ concurrency:
 jobs:
   crux-history:
     name: CrUX history snapshot
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Use Node 24
-        uses: actions/setup-node@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 24
+          persist-credentials: false
+
+      - name: Use pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
 
       - name: Query configured production field data
         run: node scripts/report-crux.mjs
@@ -33,7 +35,7 @@ jobs:
           CRUX_API_KEY: ${{ secrets.CRUX_API_KEY }}
 
       - name: Upload aggregate field report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: crux-history-${{ github.run_id }}
           path: |

@@ -88,6 +88,11 @@ export const en = {
       description:
         'Start a new local diagram from a maintained example. Experimental diagram types are marked and may change in upstream Mermaid releases.',
       search: 'Search templates',
+      loading: 'Loading maintained templates…',
+      loadError: 'Templates could not be loaded. Your current diagram is unchanged.',
+      retry: 'Retry loading templates',
+      retryUnavailable:
+        'Templates need a reload to recover, but reloading would discard this temporary workspace. Export your diagrams before reloading manually.',
       noMatches: 'No templates match that search.',
     },
     shareDialog: {

@@ -1,6 +1,9 @@
 # Provider-neutral static deployment
 
-Open Mermaid ships as a static `dist/` artifact. No Node process, database, account service, API key, OpenAI/ChatGPT connection, or server-side rendering is required at runtime.
+Open Mermaid ships as a static `dist/` artifact. No Node process, database, account service, API
+key, OpenAI/ChatGPT connection, or server-side rendering is required for the application runtime.
+An optional aggregate template-use profile adds a separately packaged same-origin collector; the
+static application remains fully functional without it.
 
 ## Release inputs
 
@@ -9,6 +12,7 @@ Open Mermaid ships as a static `dist/` artifact. No Node process, database, acco
 - reviewed source commit with passing CI
 - final HTTPS canonical origin with no path component
 - explicit decision to enable indexing
+- explicit `PUBLIC_TELEMETRY_MODE=off|aggregate` decision; unset defaults to `off`
 - one canonical domain decision recorded according to `DOMAIN_SELECTION.md`
 - completed name, domain, trademark, privacy, security, license, accessibility, and browser review
 
@@ -19,6 +23,7 @@ corepack enable
 pnpm install --frozen-lockfile
 PUBLIC_SITE_URL=https://diagrams.example.org \
 PUBLIC_INDEX_SITE=true \
+PUBLIC_TELEMETRY_MODE=off \
 pnpm build:release
 pnpm test:metadata
 pnpm test:independence
@@ -37,8 +42,8 @@ Preview and pull-request deployments must:
 - set `X-Robots-Tag: noindex, nofollow` for all responses at the hosting layer;
 - require access control when content or unreleased behavior is sensitive;
 - use a preview-specific origin rather than a production canonical domain;
-- never reuse production network analytics, ads, credentials, or user data (v1 has none by
-  design).
+- never reuse production aggregate telemetry storage, ads, credentials, or user data; use
+  `PUBLIC_TELEMETRY_MODE=off`.
 
 Meta robots is defense in depth, not a substitute for preview access control. `robots.txt` does not remove a leaked URL from search results.
 
@@ -66,6 +71,14 @@ The preferred self-hosted topology is host Caddy on public ports 80/443 proxying
 Use the pinned artifact-only `Dockerfile`, hardened `compose.yml`, and `ops/caddy/openmermaid.caddy`. Run `pnpm test:deployment:browser` before promotion; CI exercises the same image through a real pinned Caddy edge and Chromium renderer smoke, then generates a separate container SBOM. See [SELF_HOSTING.md](SELF_HOSTING.md) for the complete existing-Caddy and clean-host runbook.
 
 This profile is an implementation of the provider-neutral contract, not a new application runtime. `dist/` remains independently deployable to any compliant HTTPS static host.
+
+The optional aggregate profile uses `compose.telemetry.yml` and
+`ops/caddy/openmermaid-telemetry.caddy`. Caddy maps only
+`POST /api/telemetry/v1/template-uses` and
+`GET /api/telemetry/v1/template-counts` to the loopback collector; `/healthz` remains private.
+Review [AGGREGATE_TELEMETRY.md](AGGREGATE_TELEMETRY.md) before enabling it. Static hosts that cannot
+provide these same-origin paths must deploy the telemetry-off artifact; the editor does not need a
+substitute endpoint.
 
 ## Provider notes
 
@@ -115,7 +128,11 @@ From a fresh browser profile and command-line client, verify:
 8. accessibility, bundle, Lighthouse, and internal-link gates pass against the deployed origin;
 9. no service worker is registered and no offline claim appears;
 10. logs contain no repeated CSP, MIME, missing-asset, 404, or renderer failure warnings;
-11. the performance page reports current-visit metrics without an outbound telemetry request, and the optional CrUX workflow targets the exact canonical origin.
+11. the performance page reports current-visit metrics without an outbound performance telemetry
+    request, and the optional CrUX workflow targets the exact canonical origin;
+12. in telemetry-off mode, `/editor/` and `/templates/` make no telemetry request and retain
+    `connect-src 'none'`; in aggregate mode, opt-in, opt-out, retry, exact payload, coarsened count,
+    and collector-failure behavior pass without exposing diagram data.
 
 ## Rollback
 

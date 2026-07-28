@@ -42,15 +42,17 @@ async function waitForServer() {
 }
 
 function startPreview() {
-  const child = spawn(
-    'pnpm',
-    ['exec', 'astro', 'preview', '--host', host, '--port', String(port)],
-    {
-      cwd: workspace,
-      env: process.env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    },
+  const astroExecutable = resolve(
+    workspace,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'astro.cmd' : 'astro',
   );
+  const child = spawn(astroExecutable, ['preview', '--host', host, '--port', String(port)], {
+    cwd: workspace,
+    env: process.env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
   let output = '';
   child.stdout.on('data', (chunk) => {
     output += chunk.toString();

@@ -17,31 +17,99 @@ concurrency:
 env:
   PUBLIC_SITE_URL: https://openmermaid.example
   PUBLIC_INDEX_SITE: 'false'
+  PUBLIC_TELEMETRY_MODE: 'off'
   CI: 'true'
 
 jobs:
+  build:
+    name: Reproducible static artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          run_install: false
+
+      - name: Use pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install frozen dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Validate the public-release configuration gate
+        run: node scripts/validate-release-env.mjs
+        env:
+          PUBLIC_SITE_URL: https://openmermaid.test
+          PUBLIC_INDEX_SITE: 'true'
+
+      - name: Build manifest-backed portable artifact
+        run: pnpm build
+
+      - name: Test artifact integrity failure modes
+        run: pnpm test:artifact-contract
+
+      - name: Rebuild and verify deterministic output
+        run: pnpm test:build-reproducibility
+
+      - name: Upload static artifact
+        id: upload-dist
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: openmermaid-dist-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
+      - name: Record artifact archive digest
+        run: echo "Static artifact SHA-256 ${{ steps.upload-dist.outputs.artifact-digest }}" >> "$GITHUB_STEP_SUMMARY"
+
   quality:
-    name: Quality, contracts, and static build
-    runs-on: ubuntu-latest
+    name: Quality and contracts
+    needs: build
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
-          version: 10.34.5
           run_install: false
 
-      - name: Use Node 24
-        uses: actions/setup-node@v5
+      - name: Use pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version-file: .node-version
           cache: pnpm
 
-      - name: Install frozen dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install frozen dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Download the reproducible static artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: openmermaid-dist-${{ github.sha }}
+          path: dist
+          digest-mismatch: error
+
+      - name: Verify downloaded artifact integrity
+        run: pnpm test:artifact
+
+      - name: Check immutable CI action references
+        run: pnpm test:ci-config
 
       - name: Check formatting
         run: pnpm format:check
@@ -52,21 +120,12 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Validate the public-release configuration gate
-        run: node scripts/validate-release-env.mjs
-        env:
-          PUBLIC_SITE_URL: https://openmermaid.test
-          PUBLIC_INDEX_SITE: 'true'
-
       - name: Run unit, contract, security corpus, and coverage gates
         run: pnpm test:coverage
 
-      - name: Build portable static artifact
-        run: pnpm build
-
       - name: Install Chrome for Lighthouse
         id: setup-chrome
-        uses: browser-actions/setup-chrome@v2
+        uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd # v2.1.2
         with:
           chrome-version: stable
 
@@ -77,7 +136,7 @@ jobs:
 
       - name: Upload Lighthouse lab reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lighthouse-${{ github.sha }}
           path: |
@@ -97,7 +156,7 @@ jobs:
 
       - name: Upload complete dependency license report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dependency-licenses-${{ github.sha }}
           path: reports/dependency-licenses.json
@@ -107,17 +166,10 @@ jobs:
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level high
 
-      - name: Upload static artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: openmermaid-dist-${{ github.sha }}
-          path: dist/
-          if-no-files-found: error
-          retention-days: 14
-
   browser:
     name: Browser E2E (${{ matrix.project }})
-    runs-on: ubuntu-latest
+    needs: build
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -133,35 +185,43 @@ jobs:
             engine: webkit
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
-          version: 10.34.5
           run_install: false
 
-      - name: Use Node 24
-        uses: actions/setup-node@v5
+      - name: Use pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version-file: .node-version
           cache: pnpm
 
-      - name: Install frozen dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install frozen dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Download the reproducible static artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: openmermaid-dist-${{ github.sha }}
+          path: dist
+          digest-mismatch: error
+
+      - name: Verify downloaded artifact integrity
+        run: pnpm test:artifact
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps ${{ matrix.engine }}
-
-      - name: Build portable static artifact
-        run: pnpm build
 
       - name: Run browser suite
         run: pnpm exec playwright test --project=${{ matrix.project }}
 
       - name: Upload browser report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-${{ matrix.project }}-${{ github.sha }}
           path: |
@@ -172,29 +232,40 @@ jobs:
 
   deployment:
     name: Docker and Caddy deployment contract
-    runs-on: ubuntu-latest
+    needs:
+      - build
+      - quality
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
-          version: 10.34.5
           run_install: false
 
-      - name: Use Node 24
-        uses: actions/setup-node@v5
+      - name: Use pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version-file: .node-version
           cache: pnpm
 
-      - name: Install frozen dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install frozen dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Build portable static artifact
-        run: pnpm build
+      - name: Download the quality-gated static artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: openmermaid-dist-${{ github.sha }}
+          path: dist
+          digest-mismatch: error
+
+      - name: Verify downloaded artifact integrity
+        run: pnpm test:artifact
 
       - name: Install deployment-smoke browser
         run: pnpm exec playwright install --with-deps chromium
@@ -206,7 +277,7 @@ jobs:
         run: docker build --tag open-mermaid:ci .
 
       - name: Generate container CycloneDX SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
         with:
           image: open-mermaid:ci
           format: cyclonedx-json
@@ -214,34 +285,93 @@ jobs:
           artifact-name: open-mermaid-container-${{ github.sha }}.cdx.json
           upload-release-assets: false
 
+  aggregate-telemetry:
+    name: Aggregate telemetry deployment contract
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PUBLIC_SITE_URL: https://openmermaid.test
+      PUBLIC_INDEX_SITE: 'false'
+      PUBLIC_TELEMETRY_MODE: aggregate
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          run_install: false
+
+      - name: Use pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install frozen dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify aggregate artifact, collector, persistence, and Caddy boundary
+        run: pnpm test:telemetry-deployment
+
+      - name: Install aggregate browser-test engine
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run aggregate-only browser telemetry contract
+        run: pnpm exec playwright test tests/e2e/telemetry.spec.ts --project=chromium
+
+      - name: Build collector image for inventory and scanning
+        run: docker build --pull --tag open-mermaid-telemetry:ci services/telemetry
+
+      - name: Generate collector CycloneDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: open-mermaid-telemetry:ci
+          format: cyclonedx-json
+          output-file: reports/telemetry-container-sbom.cdx.json
+          artifact-name: open-mermaid-telemetry-container-${{ github.sha }}.cdx.json
+          upload-release-assets: false
+
+      - name: Scan collector image for high-severity vulnerabilities
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          image: open-mermaid-telemetry:ci
+          fail-build: true
+          severity-cutoff: high
+          output-format: table
+
   sbom:
     name: Software bill of materials
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
-          version: 10.34.5
           run_install: false
 
-      - name: Use Node 24
-        uses: actions/setup-node@v5
+      - name: Use pinned Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version-file: .node-version
           cache: pnpm
 
-      - name: Install frozen dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install frozen dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Generate and schema-validate CycloneDX SBOM
         run: pnpm sbom
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sbom-${{ github.sha }}
           path: reports/sbom.cdx.json

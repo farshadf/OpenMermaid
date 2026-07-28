@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 
-import { RendererFrameClient, RendererOperationError, type SanitizedSvg } from '@lib/rendering';
+import { RendererFrameClient, RendererOperationError } from '@lib/rendering/client';
+import type { SanitizedSvg } from '@lib/rendering/sanitize';
 
 import { en } from '../../i18n/en';
 import { Icon } from './Icon';

@@ -77,3 +77,79 @@ test('opt-in history persists minimized samples and can be cleared', async ({ pa
     .toBeNull();
   await expect.poll(async () => (await storedVitalSamples(page)).length).toBe(0);
 });
+
+test('editor startup stays within its interactive JavaScript budget', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'Decoded resource sizes are gated once in Chromium.');
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await page.goto('/editor/');
+  await expect(page.getByLabel('Mermaid diagram source')).toBeVisible();
+
+  const startupScripts = await page.evaluate(() =>
+    performance
+      .getEntriesByType('resource')
+      .map((resource) => {
+        const url = new URL(resource.name);
+        return {
+          sameOrigin: url.origin === location.origin,
+          path: url.pathname,
+          decodedBytes: resource.decodedBodySize,
+        };
+      })
+      .filter(({ sameOrigin, path }) => sameOrigin && path.endsWith('.js')),
+  );
+  const decodedBytes = startupScripts.reduce((total, resource) => total + resource.decodedBytes, 0);
+
+  const startupPaths = startupScripts.map(({ path }) => path);
+  expect(decodedBytes).toBeLessThanOrEqual(145_000);
+  expect(
+    startupPaths.filter((path) =>
+      /\/_assets\/(?:CodeEditor|codemirror|codec|export|repository|sanitize|template-catalog)\.[^/]+\.js$/u.test(
+        path,
+      ),
+    ),
+  ).toEqual([]);
+  expect(startupPaths).not.toContain('/renderer/runtime.js');
+  expect(pageErrors).toEqual([]);
+});
+
+test('a failed deferred template load is recoverable without an unhandled rejection', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'The optional-chunk recovery contract is gated once.');
+  const pageErrors: string[] = [];
+  let catalogRequests = 0;
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.route(/\/_assets\/template-catalog\.[^/]+\.js$/u, async (route) => {
+    catalogRequests += 1;
+    if (catalogRequests === 1) {
+      await route.abort('failed');
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto('/editor/');
+  await expect(page.getByLabel('Mermaid diagram source')).toBeVisible();
+  await page.getByRole('button', { name: 'Choose a Mermaid template' }).click();
+  await expect(page.getByRole('alert')).toContainText('Templates could not be loaded');
+
+  const pendingSource = 'flowchart LR\n  Retry --> PreservesRecentEdits';
+  await page.getByLabel('Mermaid diagram source').evaluate((element, source) => {
+    const textarea = element as HTMLTextAreaElement;
+    textarea.value = source;
+    textarea.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+  }, pendingSource);
+  await expect(page.locator('.save-state')).toHaveAttribute('data-state', 'pending');
+
+  await page.getByRole('button', { name: 'Retry loading templates' }).click();
+  await expect(page.getByRole('button', { name: /Sequence diagram/u }).first()).toBeVisible();
+  await expect(page.getByLabel('Mermaid diagram source')).toHaveValue(pendingSource);
+  expect(catalogRequests).toBe(2);
+  expect(pageErrors).toEqual([]);
+});

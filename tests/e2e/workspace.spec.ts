@@ -223,6 +223,11 @@ test('detects a real multi-tab revision conflict and preserves local edits as a 
 test('uses a clearly marked temporary workspace when IndexedDB is unavailable', async ({
   page,
 }) => {
+  let catalogRequests = 0;
+  await page.route(/\/_assets\/template-catalog\.[^/]+\.js$/u, async (route) => {
+    catalogRequests += 1;
+    await route.abort('failed');
+  });
   await page.addInitScript(() => {
     Object.defineProperty(globalThis, 'indexedDB', {
       configurable: true,
@@ -248,6 +253,20 @@ test('uses a clearly marked temporary workspace when IndexedDB is unavailable', 
     .fill('flowchart LR\n  Temporary --> StillEditable');
   await waitForAutosave(page);
   await expect(page.locator('.save-state')).toContainText('Temporary');
+
+  await page.getByRole('button', { name: 'Choose a Mermaid template' }).click();
+  await expect(page.getByRole('alert')).toContainText('Templates could not be loaded');
+  await page.getByRole('button', { name: 'Retry loading templates' }).click();
+  await expect(
+    page.getByText(
+      'Templates need a reload to recover, but reloading would discard this temporary workspace.',
+    ),
+  ).toBeVisible();
+  await expect(page.locator('#document-title')).toHaveValue('Temporary-only draft');
+  await expect(page.getByLabel('Mermaid diagram source')).toHaveValue(
+    'flowchart LR\n  Temporary --> StillEditable',
+  );
+  expect(catalogRequests).toBe(1);
 
   await page.reload();
   await expect(page.getByLabel('Mermaid diagram source')).toBeVisible();

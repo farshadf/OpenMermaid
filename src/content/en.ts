@@ -2,7 +2,7 @@ export const english = {
   siteName: 'Open Mermaid',
   siteTagline: 'Private, fast Mermaid diagrams in your browser',
   siteDescription:
-    'Create, validate, share, and export Mermaid diagrams in a private local workspace. No account, backend, network analytics, or API key required.',
+    'Create, validate, share, and export Mermaid diagrams in a private local workspace. No account, application backend, or API key required.',
   navigation: {
     home: 'Home',
     editor: 'Editor',

@@ -2,7 +2,10 @@
 
 ## Goals
 
-Open Mermaid v1 is a browser application that remains fully useful without a backend, account, API key, network analytics service, runtime CDN, AI provider, or ChatGPT connection. The deployable product is a portable static `dist/` directory.
+Open Mermaid v1 is a browser application that remains fully useful without an application backend,
+account, API key, telemetry collector, runtime CDN, AI provider, or ChatGPT connection. The
+deployable product is a portable static `dist/` directory. A separately deployed, privacy-bounded
+aggregate telemetry adapter is optional and never handles diagram content.
 
 The design optimizes for:
 
@@ -41,13 +44,27 @@ flowchart LR
 
 Public routes contain semantic HTML and static SVG illustrations. They do not import Mermaid, CodeMirror, IndexedDB services, or the editor island. The editor route hydrates one Preact island. Mermaid loads only in the renderer bundle used by the sandboxed iframe.
 
-The canonical self-hosted delivery path adds no application service:
+The canonical default self-hosted delivery path adds no application service:
 
 ```text
 Internet -> host Caddy :80/:443 -> 127.0.0.1:8088 -> static container :8080 -> dist/
 ```
 
 Caddy is the only public edge. Docker packages the exact tested artifact and publishes the static server only on host loopback. The image contains Nginx configuration and `dist/`, but no Node runtime, source tree, dependency store, account service, application secret, or writable content volume. Other compliant static hosts can still serve the same `dist/` directly.
+
+An operator who deliberately enables aggregate template telemetry adds one isolated same-origin
+adapter:
+
+```text
+Internet -> host Caddy :80/:443
+              |-> static application at 127.0.0.1:8088
+              `-> exact telemetry routes at 127.0.0.1:8091
+```
+
+The static application remains the system of record for documents. Caddy routes only
+`POST /api/telemetry/v1/template-uses` and `GET /api/telemetry/v1/template-counts` to the adapter;
+no catch-all application traffic or browser document route reaches it. Disabling or losing the
+adapter cannot prevent editing, rendering, storage, sharing, or export.
 
 ## Layer boundaries
 
@@ -58,8 +75,9 @@ Owned by Astro layouts, typed English content, guide/template data, and prerende
 Rules:
 
 - no Mermaid or CodeMirror import;
-- no network analytics service, outbound telemetry, remote fonts, runtime content APIs, or
-  client-side rendering requirement;
+- no remote fonts, runtime content API, or client-side rendering requirement;
+- the default telemetry-off build contains no telemetry bootstrap or request; an aggregate build
+  may load only the small same-origin adapter bootstrap described below;
 - no generated claims such as ratings or automatic accessibility conformance;
 - every template/guide exposes useful source and prose in HTML.
 
@@ -73,6 +91,33 @@ The optional self-hosted delivery layer is operational packaging, not applicatio
 - the static server owns MIME, cache policy, the tested main/renderer response headers, `/healthz`, and a real 404;
 - host Caddy owns certificates, canonical redirects, HSTS, compression, and reverse-proxy health checks;
 - neither layer receives browser document source, URL fragments, or an application credential.
+
+### Optional aggregate telemetry adapter
+
+The adapter is outside the standalone document dependency graph. Its browser and service contracts
+are both deny-by-default:
+
+- `PUBLIC_TELEMETRY_MODE=off` is the default and emits no client telemetry code, request, queue, or
+  preference storage;
+- an aggregate build relaxes `connect-src` to `'self'` only where the reporter or catalog count
+  loader can run; the sandboxed renderer keeps `connect-src 'none'`;
+- aggregate reporting requires an explicit visitor opt-in and is disabled when supported Global
+  Privacy Control is asserted;
+- the only accepted v1 event is a successful, user-initiated template application;
+- the browser payload contains only an event UUID, catalog version, and allowlisted template slug;
+- a separate bounded IndexedDB queue retains failed reports for a maximum of seven days and never
+  shares the document repository;
+- the service rejects unknown fields, unknown event names, unknown slugs, malformed IDs, oversized
+  bodies, and unsupported methods or content types;
+- accepted events are deduplicated and aggregated immediately; raw event rows are not retained;
+- public usage snapshots exclude the current UTC day, then threshold and round down prior-day
+  aggregates before the catalog displays labels such as “20+ reported uses.”
+
+Diagram source, document title and ID, URL/query/fragment, search or filter state, referrer, user
+agent, locale, viewport, performance measurements, advertising data, identity, and session data are
+outside the schema. The adapter is not an account, document, analytics, attribution, or ad-targeting
+service. See `docs/AGGREGATE_TELEMETRY.md` for its data map, deployment contract, and verification
+gates.
 
 ### Shared core
 
@@ -177,9 +222,23 @@ Fragments are not encrypted. They avoid inclusion in ordinary HTTP requests but 
 4. PNG export draws sanitized SVG into a local canvas with bounded dimensions, selected scale, and selected background.
 5. Object URLs are short-lived and revoked after the download starts.
 
+### Optional template usage report
+
+1. A visitor explicitly enables aggregate usage reporting.
+2. The editor successfully applies a known catalog template through a user-initiated template
+   action.
+3. The reporter creates a random event UUID and a fixed-schema payload containing only that UUID,
+   the catalog version, and the template slug.
+4. A same-origin request attempts delivery; a failure never changes the editor result.
+5. A bounded, expiring queue may retry the same UUID. The collector hashes the UUID for short-lived
+   deduplication, increments an aggregate counter once, and stores no raw event row.
+6. The public catalog independently reads a cached snapshot. Counts below the publication threshold
+   are absent; the rest are rounded down and labeled as reported uses.
+
 ## Performance model
 
-- Static pages hydrate nothing unless a small page-specific behavior such as template filtering is required.
+- Static pages hydrate nothing unless a small page-specific behavior such as template catalog
+  filtering or an explicitly enabled aggregate adapter is required.
 - Mermaid and CodeMirror must not appear in public route chunks.
 - System fonts eliminate font downloads and text reflow.
 - The editor island is isolated to `/editor/`; Mermaid stays in the renderer chunk.
@@ -207,6 +266,8 @@ A future ChatGPT widget is not a mode hidden inside the standalone bundle. It is
 
 ## Deferred v1 concerns
 
-Accounts, backend persistence, cloud sync, collaboration, public gallery, network analytics,
-session replay, AI, ChatGPT code, active ads, PWA/service worker, offline guarantees, visual
-drag-and-drop editing, PDF, and JPEG are outside the v1 runtime and dependency graph.
+Accounts, backend document persistence, cloud sync, collaboration, public gallery, general-purpose
+analytics, session replay, identity tracking, AI, ChatGPT code, active ads, PWA/service worker,
+offline guarantees, visual drag-and-drop editing, PDF, and JPEG are outside the v1 runtime and
+dependency graph. The only optional v1 service is the bounded aggregate template-usage adapter
+described above.

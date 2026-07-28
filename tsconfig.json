@@ -16,6 +16,13 @@
     },
     "types": ["vitest/globals"]
   },
-  "include": [".astro/types.d.ts", "src/**/*", "tests/**/*", "scripts/**/*", "*.config.ts"],
+  "include": [
+    ".astro/types.d.ts",
+    "src/**/*",
+    "tests/**/*",
+    "scripts/**/*",
+    "services/**/*.ts",
+    "*.config.ts"
+  ],
   "exclude": ["dist", "node_modules"]
 }

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   RendererFrameClient,
   RendererOperationError,
+  RendererResetError,
   RendererTimeoutError,
 } from '../../../src/lib/rendering/client';
 import {
@@ -130,6 +131,92 @@ describe('RendererFrameClient trust boundary', () => {
     // Avoid leaving the newer request pending when the test tears down.
     client.dispose();
     await expect(newer).rejects.toThrow(/disposed/iu);
+  });
+
+  it('rechecks staleness after the lazy sanitizer boundary', async () => {
+    const iframe = createFrame();
+    const client = new RendererFrameClient({ iframe });
+    const postMessage = captureRequests(iframe);
+    announceReady(iframe, client);
+
+    const older = client.render({ source: 'flowchart LR\nA-->B', revision: 6 });
+    const olderRequest = await latestRequest(postMessage);
+    dispatchFromFrame(iframe, {
+      ...responseEnvelope(client),
+      kind: 'result',
+      requestId: olderRequest.requestId,
+      revision: 6,
+      operation: 'render',
+      payload: {
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>Old</text></svg>',
+      },
+    });
+
+    // Let the response cross the request boundary and reach the lazy sanitizer
+    // import without allowing that import's continuation to publish the result.
+    await Promise.resolve();
+    await Promise.resolve();
+    const newer = client.render({ source: 'flowchart LR\nA-->C', revision: 7 });
+
+    await expect(older).rejects.toMatchObject({ code: 'stale', revision: 6 });
+    expect(client.lastValidResult).toBeUndefined();
+    client.dispose();
+    await expect(newer).rejects.toThrow(/disposed/iu);
+  });
+
+  it('rejects an old-realm result when reset crosses the lazy sanitizer boundary', async () => {
+    const iframe = createFrame();
+    const client = new RendererFrameClient({ iframe });
+    const postMessage = captureRequests(iframe);
+    announceReady(iframe, client);
+
+    const render = client.render({ source: 'flowchart LR\nA-->B', revision: 8 });
+    const request = await latestRequest(postMessage);
+    dispatchFromFrame(iframe, {
+      ...responseEnvelope(client),
+      kind: 'result',
+      requestId: request.requestId,
+      revision: 8,
+      operation: 'render',
+      payload: {
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>Old realm</text></svg>',
+      },
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    client.reset('test-reset-during-sanitization');
+
+    await expect(render).rejects.toEqual(expect.any(RendererResetError));
+    expect(client.lastValidResult).toBeUndefined();
+    client.dispose();
+  });
+
+  it('rejects an in-flight result when disposal crosses the lazy sanitizer boundary', async () => {
+    const iframe = createFrame();
+    const client = new RendererFrameClient({ iframe });
+    const postMessage = captureRequests(iframe);
+    announceReady(iframe, client);
+
+    const render = client.render({ source: 'flowchart LR\nA-->B', revision: 9 });
+    const request = await latestRequest(postMessage);
+    dispatchFromFrame(iframe, {
+      ...responseEnvelope(client),
+      kind: 'result',
+      requestId: request.requestId,
+      revision: 9,
+      operation: 'render',
+      payload: {
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>Disposed</text></svg>',
+      },
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    client.dispose();
+
+    await expect(render).rejects.toEqual(expect.any(RendererResetError));
+    expect(client.lastValidResult).toBeUndefined();
   });
 
   it('ignores wrong-origin and wrong-session messages', async () => {

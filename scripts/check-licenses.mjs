@@ -5,7 +5,16 @@ import path from 'node:path';
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const reportPath = path.join(projectRoot, 'reports', 'dependency-licenses.json');
-const command = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const packageManagerCandidates =
+  process.platform === 'win32'
+    ? [
+        { command: 'pnpm.cmd', prefix: [] },
+        { command: 'corepack.cmd', prefix: ['pnpm'] },
+      ]
+    : [
+        { command: 'pnpm', prefix: [] },
+        { command: 'corepack', prefix: ['pnpm'] },
+      ];
 
 // These identifiers are accepted on their own. Reciprocal licenses deliberately
 // do not appear here: they require an exact package-and-version review below.
@@ -101,12 +110,22 @@ const reviewedPackages = new Map(
 );
 
 function runLicenseInventory(args) {
-  const result = spawnSync(command, ['licenses', 'list', ...args, '--json'], {
-    cwd: projectRoot,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-  });
+  let result;
+  for (const { command, prefix } of packageManagerCandidates) {
+    result = spawnSync(command, [...prefix, 'licenses', 'list', ...args, '--json'], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (!(result.error && 'code' in result.error && result.error.code === 'ENOENT')) break;
+  }
 
+  if (result === undefined) {
+    throw new Error('Unable to start pnpm or Corepack.');
+  }
+  if (result.error) {
+    throw new Error('Unable to start pnpm or Corepack.', { cause: result.error });
+  }
   if (result.status !== 0) {
     throw new Error(result.stderr || result.stdout || 'Unable to enumerate dependency licenses.');
   }

@@ -3,6 +3,10 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const dist = new URL('../dist/', import.meta.url);
+const telemetryMode = process.env.PUBLIC_TELEMETRY_MODE ?? 'off';
+if (!['off', 'aggregate'].includes(telemetryMode)) {
+  throw new Error('PUBLIC_TELEMETRY_MODE must be either "off" or "aggregate".');
+}
 
 async function htmlFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -50,6 +54,9 @@ function policyFor(html, relative) {
       "form-action 'none'",
     ].join('; ');
   }
+  const telemetryConnectionAllowed =
+    telemetryMode === 'aggregate' &&
+    (relative === 'editor/index.html' || relative === 'templates/index.html');
   return [
     "default-src 'none'",
     `script-src 'self' ${hashes.join(' ')}`.trim(),
@@ -59,7 +66,7 @@ function policyFor(html, relative) {
     "style-src-attr 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'none'",
-    "connect-src 'none'",
+    telemetryConnectionAllowed ? "connect-src 'self'" : "connect-src 'none'",
     "frame-src 'self'",
     "worker-src 'none'",
     "media-src 'none'",

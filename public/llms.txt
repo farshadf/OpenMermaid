@@ -1,6 +1,6 @@
 # Open Mermaid
 
-> Open Mermaid is a standalone, local-first browser workspace for creating, validating, organizing, sharing, and exporting Mermaid diagrams. It requires no account, application backend, API key, network analytics service, OpenAI or ChatGPT connection, or runtime CDN.
+> Open Mermaid is a standalone, local-first browser workspace for creating, validating, organizing, sharing, and exporting Mermaid diagrams. It requires no account, application backend, API key, OpenAI or ChatGPT connection, or runtime CDN. Deployments may optionally offer explicit opt-in, aggregate template-use reporting that never includes diagram content.
 
 This file is a supplemental machine-readable index. It does not replace semantic HTML, canonical metadata, robots policy, or a sitemap, and its presence makes no ranking promise.
 

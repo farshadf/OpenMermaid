@@ -2,6 +2,7 @@ import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const dist = new URL('../dist/', import.meta.url);
+const telemetryMode = process.env.PUBLIC_TELEMETRY_MODE ?? 'off';
 const requiredFiles = [
   'index.html',
   'editor/index.html',
@@ -16,9 +17,14 @@ const requiredFiles = [
   'robots.txt',
   'llms.txt',
   'og-default.png',
+  'openmermaid-artifact-manifest.json',
   'sitemap-index.xml',
 ];
 const errors = [];
+if (!['off', 'aggregate'].includes(telemetryMode)) {
+  errors.push('PUBLIC_TELEMETRY_MODE must be either "off" or "aggregate".');
+}
+const aggregateTelemetryEnabled = telemetryMode === 'aggregate';
 
 for (const relative of requiredFiles) {
   try {
@@ -102,6 +108,12 @@ const interactiveRoutes = new Set([
   'performance/index.html',
   'renderer/index.html',
 ]);
+const aggregateTelemetryRoutes = new Set([
+  'editor/index.html',
+  'privacy/index.html',
+  'templates/index.html',
+]);
+const aggregateTelemetryConnectionRoutes = new Set(['editor/index.html', 'templates/index.html']);
 const checkedInternalTargets = new Set();
 
 function routeUrl(relative) {
@@ -159,6 +171,9 @@ for (const file of pages) {
   if (!html.includes('<meta name="description"') && relative !== 'renderer/index.html') {
     errors.push(`${relative}: missing description metadata`);
   }
+  if (!/<meta\b[^>]*name=["']referrer["'][^>]*content=["']no-referrer["'][^>]*>/iu.test(html)) {
+    errors.push(`${relative}: missing no-referrer document policy`);
+  }
   if (relative !== 'renderer/index.html' && relative !== '404.html') {
     const canonicals = [...html.matchAll(/<link\b[^>]*rel=["']canonical["'][^>]*>/giu)];
     if (canonicals.length !== 1) {
@@ -192,15 +207,55 @@ for (const file of pages) {
     errors.push(`${relative}: missing build-derived Content Security Policy`);
   } else if (/script-src[^;]*'unsafe-inline'/iu.test(csp)) {
     errors.push(`${relative}: script-src must not allow arbitrary inline scripts`);
+  } else {
+    const expectedConnection =
+      aggregateTelemetryEnabled && aggregateTelemetryConnectionRoutes.has(relative)
+        ? "'self'"
+        : "'none'";
+    if (!new RegExp(`(?:^|;)\\s*connect-src\\s+${expectedConnection}(?:;|$)`, 'u').test(csp)) {
+      errors.push(
+        `${relative}: expected connect-src ${expectedConnection} for telemetry mode ${telemetryMode}`,
+      );
+    }
+  }
+  const scriptAssets = [...html.matchAll(/(?:src|href)="([^"]+\.js(?:\?[^"]*)?)"/g)].map(
+    (match) => match[1],
+  );
+  const telemetryEntries = scriptAssets.filter((asset) =>
+    /^\/_assets\/TelemetryBootstrap(?:\.astro_astro_type_script_index_0_lang)?\.[^/]+\.js$/u.test(
+      asset,
+    ),
+  );
+  if (
+    telemetryEntries.length > 0 &&
+    (!aggregateTelemetryEnabled || !aggregateTelemetryRoutes.has(relative))
+  ) {
+    errors.push(`${relative}: aggregate telemetry bootstrap appeared outside its reviewed routes`);
+  }
+  if (
+    aggregateTelemetryEnabled &&
+    aggregateTelemetryRoutes.has(relative) &&
+    telemetryEntries.length !== 1
+  ) {
+    errors.push(`${relative}: expected exactly one aggregate telemetry bootstrap entry`);
   }
   if (!interactiveRoutes.has(relative)) {
-    const scriptAssets = [...html.matchAll(/(?:src|href)="([^"]+\.js(?:\?[^"]*)?)"/g)].map(
-      (match) => match[1],
-    );
     const unexpectedScripts = scriptAssets.filter(
       (asset) =>
-        !/^\/_assets\/VitalsBootstrap\.[^/]+\.js$/u.test(asset) &&
-        !(relative === 'templates/index.html' && asset === '/scripts/template-search.js'),
+        !/^\/_assets\/VitalsBootstrap(?:\.astro_astro_type_script_index_0_lang)?\.[^/]+\.js$/u.test(
+          asset,
+        ) &&
+        !(
+          aggregateTelemetryEnabled &&
+          aggregateTelemetryRoutes.has(relative) &&
+          /^\/_assets\/TelemetryBootstrap(?:\.astro_astro_type_script_index_0_lang)?\.[^/]+\.js$/u.test(
+            asset,
+          )
+        ) &&
+        !(
+          relative === 'templates/index.html' &&
+          /^\/_assets\/index\.astro_astro_type_script_index_0_lang\.[^/]+\.js$/u.test(asset)
+        ),
     );
     if (unexpectedScripts.length > 0) {
       errors.push(
@@ -208,9 +263,19 @@ for (const file of pages) {
       );
     }
   }
-  const scriptAssets = [...html.matchAll(/(?:src|href)="([^"]+\.js(?:\?[^"]*)?)"/g)].map(
-    (match) => match[1],
-  );
+  if (relative === 'templates/index.html') {
+    const catalogueEntries = scriptAssets.filter((asset) =>
+      /^\/_assets\/index\.astro_astro_type_script_index_0_lang\.[^/]+\.js$/u.test(asset),
+    );
+    if (catalogueEntries.length !== 1) {
+      errors.push('templates/index.html: expected exactly one catalogue entry module');
+    } else {
+      const entry = await readFile(new URL(catalogueEntries[0].slice(1), dist), 'utf8');
+      if (!/import["']\.\/template-catalogue\.[^/"']+\.js["']/u.test(entry)) {
+        errors.push('templates/index.html: catalogue entry does not load the bounded page chunk');
+      }
+    }
+  }
   for (const asset of scriptAssets) {
     const normalized = asset.toLowerCase();
     if (
@@ -220,6 +285,36 @@ for (const file of pages) {
       errors.push(`${relative}: unexpectedly references editor dependency ${asset}`);
     }
   }
+}
+
+async function filesWithExtension(directory, extension) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const resolved = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...(await filesWithExtension(resolved, extension)));
+    else if (entry.name.endsWith(extension)) files.push(resolved);
+  }
+  return files;
+}
+
+try {
+  const builtScripts = await filesWithExtension(dist.pathname, '.js');
+  const scriptText = (await Promise.all(builtScripts.map((file) => readFile(file, 'utf8')))).join(
+    '\n',
+  );
+  const endpointPresence = {
+    counts: scriptText.includes('/api/telemetry/v1/template-counts'),
+    events: scriptText.includes('/api/telemetry/v1/template-uses'),
+  };
+  if (aggregateTelemetryEnabled && (!endpointPresence.counts || !endpointPresence.events)) {
+    errors.push('Aggregate artifact is missing one or both reviewed telemetry endpoint strings.');
+  }
+  if (!aggregateTelemetryEnabled && (endpointPresence.counts || endpointPresence.events)) {
+    errors.push('Telemetry-off artifact contains an aggregate telemetry endpoint string.');
+  }
+} catch {
+  errors.push('Built JavaScript could not be inspected for telemetry endpoint provenance.');
 }
 
 try {
@@ -258,6 +353,43 @@ try {
   }
 } catch (error) {
   errors.push(`Editor social and structured metadata could not be inspected: ${String(error)}`);
+}
+
+try {
+  const catalogue = await readFile(new URL('templates/index.html', dist), 'utf8');
+  const catalogueBlocks = [
+    ...catalogue.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gu),
+  ];
+  const catalogueData = catalogueBlocks.flatMap((match) => {
+    const value = JSON.parse(match[1]);
+    return Array.isArray(value) ? value : [value];
+  });
+  const collection = catalogueData.find((item) => item?.['@type'] === 'CollectionPage');
+  const itemList = collection?.mainEntity;
+  if (
+    itemList?.['@type'] !== 'ItemList' ||
+    itemList.numberOfItems !== 37 ||
+    !Array.isArray(itemList.itemListElement) ||
+    itemList.itemListElement.length !== 37
+  ) {
+    errors.push('Template catalogue structured data must describe its complete 37-item list.');
+  }
+  const thumbnails = [...catalogue.matchAll(/<img\b[^>]*>/gu)].filter((match) =>
+    /src="\/examples\/templates\/[^"]+\.svg"/u.test(match[0]),
+  );
+  if (
+    thumbnails.length !== 37 ||
+    thumbnails.some(
+      ([markup]) =>
+        !/\balt=""/u.test(markup) ||
+        !/\bloading="lazy"/u.test(markup) ||
+        !/\bdecoding="async"/u.test(markup),
+    )
+  ) {
+    errors.push('Template catalogue must expose 37 lazy, decorative SVG thumbnails.');
+  }
+} catch (error) {
+  errors.push(`Template catalogue metadata could not be inspected: ${String(error)}`);
 }
 
 try {

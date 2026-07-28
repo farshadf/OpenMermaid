@@ -1,9 +1,37 @@
+import { DEFAULT_MERMAID_SOURCE } from './default-source.ts';
+
 export type DiagramMaturity = 'stable' | 'beta' | 'experimental';
+export type TemplateKind = 'starter' | 'recipe';
+export type TemplateCategory =
+  | 'process-workflow'
+  | 'software-systems'
+  | 'data-comparison'
+  | 'strategy-analysis'
+  | 'syntax-diagnostics';
+
+export const templateCategoryLabels: Readonly<Record<TemplateCategory, string>> = {
+  'process-workflow': 'Process & workflow',
+  'software-systems': 'Software & systems',
+  'data-comparison': 'Data & comparison',
+  'strategy-analysis': 'Strategy & analysis',
+  'syntax-diagnostics': 'Syntax & diagnostics',
+};
+
+export const templateCategoryOrder: readonly TemplateCategory[] = [
+  'process-workflow',
+  'software-systems',
+  'data-comparison',
+  'strategy-analysis',
+  'syntax-diagnostics',
+];
 
 export interface DiagramTemplate {
   slug: string;
   name: string;
   diagramType: string;
+  kind: TemplateKind;
+  category: TemplateCategory;
+  recommendedRank: number;
   maturity: DiagramMaturity;
   summary: string;
   useWhen: string;
@@ -17,22 +45,22 @@ export interface DiagramTemplate {
 
 /**
  * The in-repository catalog tracks every diagram family documented by the pinned
- * Mermaid release. Maturity describes upstream documentation, not Open Mermaid
- * support quality. Beta and experimental entries are deliberately labeled in UI.
+ * Mermaid release. Mermaid does not expose formal runtime maturity metadata, so
+ * this conservative map follows the pinned documentation and graduation notes,
+ * not Open Mermaid support quality. Early-maturity entries are labeled in UI.
  */
 export const diagramTemplates: readonly DiagramTemplate[] = [
   {
     slug: 'flowchart-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 1,
     name: 'Flowchart starter',
     diagramType: 'Flowchart',
     maturity: 'stable',
     summary: 'Map a decision or process with a clear beginning, branch, and outcome.',
     useWhen: 'Use a flowchart for processes, decisions, system paths, and troubleshooting trees.',
-    source: `flowchart LR
-  Start([Start]) --> Check{Ready?}
-  Check -->|Yes| Ship[Ship the change]
-  Check -->|No| Revise[Revise the plan]
-  Revise --> Check`,
+    source: DEFAULT_MERMAID_SOURCE,
     sourceDescription: 'A left-to-right process that loops until a change is ready to ship.',
     commonErrors: [
       'Reusing a node ID for two concepts causes Mermaid to merge them.',
@@ -44,6 +72,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'sequence-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 2,
     name: 'Sequence diagram starter',
     diagramType: 'Sequence diagram',
     maturity: 'stable',
@@ -69,6 +100,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'class-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 3,
     name: 'Class diagram starter',
     diagramType: 'Class diagram',
     maturity: 'stable',
@@ -98,6 +132,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'state-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 4,
     name: 'State diagram starter',
     diagramType: 'State diagram',
     maturity: 'stable',
@@ -121,6 +158,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'er-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 5,
     name: 'Entity relationship starter',
     diagramType: 'Entity relationship diagram',
     maturity: 'stable',
@@ -152,6 +192,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'journey-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 6,
     name: 'User journey starter',
     diagramType: 'User journey',
     maturity: 'stable',
@@ -176,6 +219,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'gantt-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 7,
     name: 'Gantt chart starter',
     diagramType: 'Gantt chart',
     maturity: 'stable',
@@ -201,6 +247,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'pie-starter',
+    kind: 'starter',
+    category: 'data-comparison',
+    recommendedRank: 8,
     name: 'Pie chart starter',
     diagramType: 'Pie chart',
     maturity: 'stable',
@@ -222,6 +271,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'quadrant-starter',
+    kind: 'starter',
+    category: 'data-comparison',
+    recommendedRank: 9,
     name: 'Quadrant chart starter',
     diagramType: 'Quadrant chart',
     maturity: 'stable',
@@ -249,6 +301,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'requirement-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 10,
     name: 'Requirement diagram starter',
     diagramType: 'Requirement diagram',
     maturity: 'stable',
@@ -277,9 +332,12 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'gitgraph-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 11,
     name: 'Git graph starter',
     diagramType: 'Git graph',
-    maturity: 'stable',
+    maturity: 'experimental',
     summary: 'Explain a short branch, merge, and release history.',
     useWhen: 'Use a Git graph to teach or document a compact version-control history.',
     source: `gitGraph LR:
@@ -301,6 +359,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'info-starter',
+    kind: 'starter',
+    category: 'syntax-diagnostics',
+    recommendedRank: 12,
     name: 'Mermaid info starter',
     diagramType: 'Mermaid info diagram',
     maturity: 'stable',
@@ -318,6 +379,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'event-modeling-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 13,
     name: 'Event modeling starter',
     diagramType: 'Event modeling diagram',
     maturity: 'stable',
@@ -341,6 +405,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'swimlane-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 14,
     name: 'Swimlane starter',
     diagramType: 'Swimlane diagram',
     maturity: 'beta',
@@ -373,6 +440,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'treeview-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 15,
     name: 'TreeView starter',
     diagramType: 'TreeView diagram',
     maturity: 'beta',
@@ -397,6 +467,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'ishikawa-starter',
+    kind: 'starter',
+    category: 'strategy-analysis',
+    recommendedRank: 16,
     name: 'Ishikawa starter',
     diagramType: 'Ishikawa diagram',
     maturity: 'beta',
@@ -425,6 +498,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'venn-starter',
+    kind: 'starter',
+    category: 'data-comparison',
+    recommendedRank: 17,
     name: 'Venn diagram starter',
     diagramType: 'Venn diagram',
     maturity: 'beta',
@@ -449,6 +525,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'wardley-starter',
+    kind: 'starter',
+    category: 'strategy-analysis',
+    recommendedRank: 18,
     name: 'Wardley map starter',
     diagramType: 'Wardley map',
     maturity: 'beta',
@@ -475,6 +554,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'cynefin-starter',
+    kind: 'starter',
+    category: 'strategy-analysis',
+    recommendedRank: 19,
     name: 'Cynefin starter',
     diagramType: 'Cynefin framework diagram',
     maturity: 'beta',
@@ -504,6 +586,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'railroad-starter',
+    kind: 'starter',
+    category: 'syntax-diagnostics',
+    recommendedRank: 20,
     name: 'Railroad DSL starter',
     diagramType: 'Railroad syntax diagram',
     maturity: 'beta',
@@ -525,6 +610,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'railroad-ebnf-starter',
+    kind: 'starter',
+    category: 'syntax-diagnostics',
+    recommendedRank: 21,
     name: 'Railroad EBNF starter',
     diagramType: 'Railroad EBNF diagram',
     maturity: 'beta',
@@ -546,6 +634,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'railroad-abnf-starter',
+    kind: 'starter',
+    category: 'syntax-diagnostics',
+    recommendedRank: 22,
     name: 'Railroad ABNF starter',
     diagramType: 'Railroad ABNF diagram',
     maturity: 'beta',
@@ -567,6 +658,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'railroad-peg-starter',
+    kind: 'starter',
+    category: 'syntax-diagnostics',
+    recommendedRank: 23,
     name: 'Railroad PEG starter',
     diagramType: 'Railroad PEG diagram',
     maturity: 'beta',
@@ -588,6 +682,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'incident-triage-recipe',
+    kind: 'recipe',
+    category: 'process-workflow',
+    recommendedRank: 24,
     name: 'Incident triage recipe',
     diagramType: 'Flowchart recipe',
     maturity: 'stable',
@@ -615,6 +712,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'api-retry-recipe',
+    kind: 'recipe',
+    category: 'software-systems',
+    recommendedRank: 25,
     name: 'API retry sequence recipe',
     diagramType: 'Sequence diagram recipe',
     maturity: 'stable',
@@ -643,6 +743,9 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'release-gate-recipe',
+    kind: 'recipe',
+    category: 'process-workflow',
+    recommendedRank: 26,
     name: 'Release gate recipe',
     diagramType: 'State diagram recipe',
     maturity: 'stable',
@@ -669,12 +772,15 @@ export const diagramTemplates: readonly DiagramTemplate[] = [
   },
   {
     slug: 'sankey-starter',
+    kind: 'starter',
+    category: 'data-comparison',
+    recommendedRank: 27,
     name: 'Sankey diagram starter',
     diagramType: 'Sankey diagram',
-    maturity: 'beta',
+    maturity: 'stable',
     summary: 'Show how visits flow into editing, sharing, and exporting.',
     useWhen: 'Use a Sankey diagram for weighted flow between stages or categories.',
-    source: `sankey-beta
+    source: `sankey
 Landing,Editor,80
 Templates,Editor,45
 Editor,Export,70
@@ -690,12 +796,15 @@ Editor,Share,30`,
   },
   {
     slug: 'xychart-starter',
+    kind: 'starter',
+    category: 'data-comparison',
+    recommendedRank: 28,
     name: 'XY chart starter',
     diagramType: 'XY chart',
-    maturity: 'beta',
+    maturity: 'stable',
     summary: 'Plot render time measurements across increasing source sizes.',
     useWhen: 'Use an XY chart for values along a continuous or ordered axis.',
-    source: `xychart-beta
+    source: `xychart
   title "Render time by source size"
   x-axis "Lines" [10, 50, 100, 250]
   y-axis "Milliseconds" 0 --> 200
@@ -711,12 +820,15 @@ Editor,Share,30`,
   },
   {
     slug: 'block-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 29,
     name: 'Block diagram starter',
     diagramType: 'Block diagram',
-    maturity: 'beta',
+    maturity: 'stable',
     summary: 'Lay out an application boundary and its local components.',
     useWhen: 'Use a block diagram when spatial grouping matters more than message order.',
-    source: `block-beta
+    source: `block
   columns 2
   A["Source"]
   B["Preview"]
@@ -736,12 +848,15 @@ Editor,Share,30`,
   },
   {
     slug: 'packet-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 30,
     name: 'Packet diagram starter',
     diagramType: 'Packet diagram',
-    maturity: 'beta',
+    maturity: 'stable',
     summary: 'Document a compact binary message header.',
     useWhen: 'Use a packet diagram for bit ranges and protocol fields.',
-    source: `packet-beta
+    source: `packet
   0-7: "Version"
   8-15: "Flags"
   16-31: "Payload length"
@@ -757,9 +872,12 @@ Editor,Share,30`,
   },
   {
     slug: 'kanban-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 31,
     name: 'Kanban starter',
     diagramType: 'Kanban diagram',
-    maturity: 'beta',
+    maturity: 'stable',
     summary: 'Track a few documentation tasks through a lightweight board.',
     useWhen: 'Use a Kanban diagram to communicate work state at a point in time.',
     source: `kanban
@@ -781,6 +899,9 @@ Editor,Share,30`,
   },
   {
     slug: 'architecture-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 32,
     name: 'Architecture diagram starter',
     diagramType: 'Architecture diagram',
     maturity: 'beta',
@@ -804,6 +925,9 @@ Editor,Share,30`,
   },
   {
     slug: 'mindmap-starter',
+    kind: 'starter',
+    category: 'strategy-analysis',
+    recommendedRank: 33,
     name: 'Mindmap starter',
     diagramType: 'Mindmap',
     maturity: 'experimental',
@@ -831,6 +955,9 @@ Editor,Share,30`,
   },
   {
     slug: 'timeline-starter',
+    kind: 'starter',
+    category: 'process-workflow',
+    recommendedRank: 34,
     name: 'Timeline starter',
     diagramType: 'Timeline',
     maturity: 'experimental',
@@ -854,6 +981,9 @@ Editor,Share,30`,
   },
   {
     slug: 'c4-starter',
+    kind: 'starter',
+    category: 'software-systems',
+    recommendedRank: 35,
     name: 'C4 context starter',
     diagramType: 'C4 diagram',
     maturity: 'experimental',
@@ -877,6 +1007,9 @@ Editor,Share,30`,
   },
   {
     slug: 'radar-starter',
+    kind: 'starter',
+    category: 'data-comparison',
+    recommendedRank: 36,
     name: 'Radar chart starter',
     diagramType: 'Radar chart',
     maturity: 'beta',
@@ -900,6 +1033,9 @@ Editor,Share,30`,
   },
   {
     slug: 'treemap-starter',
+    kind: 'starter',
+    category: 'data-comparison',
+    recommendedRank: 37,
     name: 'Treemap starter',
     diagramType: 'Treemap',
     maturity: 'beta',

@@ -1,6 +1,7 @@
 ---
 import AdSlot from '../components/static/AdSlot.astro';
 import VitalsBootstrap from '../components/performance/VitalsBootstrap.astro';
+import TelemetryBootstrap from '../components/telemetry/TelemetryBootstrap.astro';
 import { english } from '../content/en';
 import { publicNavigation, SITE_DESCRIPTION, SITE_TITLE, type Breadcrumb } from '../data/site';
 import { classifyPerformancePage } from '../lib/performance/page-kind';
@@ -55,6 +56,10 @@ const safeJsonLd = JSON.stringify(ldItems).replaceAll('<', '\\u003c');
 const isCurrentNavigation = (href: string): boolean =>
   href === '/' ? Astro.url.pathname === '/' : Astro.url.pathname.startsWith(href);
 const performancePageKind = classifyPerformancePage(Astro.url.pathname);
+const aggregateTelemetryRoute =
+  Astro.url.pathname === '/editor/' ||
+  Astro.url.pathname === '/templates/' ||
+  Astro.url.pathname === '/privacy/';
 ---
 
 <!doctype html>
@@ -70,6 +75,7 @@ const performancePageKind = classifyPerformancePage(Astro.url.pathname);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="robots" content={robots} />
+    <meta name="referrer" content="no-referrer" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7fb" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#00052e" />
@@ -166,6 +172,7 @@ const performancePageKind = classifyPerformancePage(Astro.url.pathname);
       </div>
     </footer>
     <VitalsBootstrap />
+    {aggregateTelemetryRoute && <TelemetryBootstrap />}
   </body>
 </html>
 

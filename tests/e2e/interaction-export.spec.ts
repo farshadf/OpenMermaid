@@ -15,6 +15,19 @@ const LARGE_HORIZONTAL_DIAGRAM = `flowchart LR
   A10 --> A11[Eleventh planning step]
   A11 --> A12[Twelfth planning step]`;
 
+const LARGE_VERTICAL_DIAGRAM = `flowchart TD
+  A01[First review step] --> A02[Second review step]
+  A02 --> A03[Third review step]
+  A03 --> A04[Fourth review step]
+  A04 --> A05[Fifth review step]
+  A05 --> A06[Sixth review step]
+  A06 --> A07[Seventh review step]
+  A07 --> A08[Eighth review step]
+  A08 --> A09[Ninth review step]
+  A09 --> A10[Tenth review step]
+  A10 --> A11[Eleventh review step]
+  A11 --> A12[Twelfth review step]`;
+
 const PNG_DIAGRAM = `flowchart LR
   Source[Open Mermaid source] --> Export[Browser PNG export]`;
 
@@ -35,11 +48,15 @@ const expectedBackgroundPixels = {
   dark: [11, 16, 32, 255],
 } as const;
 
-async function openRenderedEditor(page: Page, source: string): Promise<void> {
+async function openRenderedEditor(
+  page: Page,
+  source: string,
+  renderTimeout = 30_000,
+): Promise<void> {
   await page.goto('/editor/');
   await page.getByLabel('Mermaid diagram source').fill(source);
   await expect(page.locator('.render-state')).toHaveAttribute('data-state', 'ready', {
-    timeout: 30_000,
+    timeout: renderTimeout,
   });
   await expect(
     page.frameLocator('iframe.preview-frame').locator('[data-renderer-scene] svg'),
@@ -60,6 +77,51 @@ async function readViewportState(page: Page): Promise<ViewportState> {
         scale: normalize(matrix.a),
       };
     });
+}
+
+async function readFitGeometry(page: Page): Promise<{
+  centeredDelta: number;
+  contained: boolean;
+  limitingUnusedSpace: number;
+}> {
+  return page
+    .frameLocator('iframe.preview-frame')
+    .locator('[data-renderer-surface]')
+    .evaluate((surface) => {
+      const svg = surface.querySelector('[data-renderer-scene] svg');
+      if (!(svg instanceof SVGSVGElement)) throw new Error('Preview SVG is missing.');
+      const surfaceBounds = surface.getBoundingClientRect();
+      const svgBounds = svg.getBoundingClientRect();
+      const horizontalCenterDelta = Math.abs(
+        svgBounds.left + svgBounds.width / 2 - (surfaceBounds.left + surfaceBounds.width / 2),
+      );
+      const verticalCenterDelta = Math.abs(
+        svgBounds.top + svgBounds.height / 2 - (surfaceBounds.top + surfaceBounds.height / 2),
+      );
+      return {
+        centeredDelta: Math.max(horizontalCenterDelta, verticalCenterDelta),
+        contained:
+          svgBounds.left >= surfaceBounds.left &&
+          svgBounds.top >= surfaceBounds.top &&
+          svgBounds.right <= surfaceBounds.right &&
+          svgBounds.bottom <= surfaceBounds.bottom,
+        limitingUnusedSpace: Math.min(
+          surfaceBounds.width - svgBounds.width,
+          surfaceBounds.height - svgBounds.height,
+        ),
+      };
+    });
+}
+
+async function expectPreviewToFit(page: Page): Promise<void> {
+  await expect.poll(async () => (await readFitGeometry(page)).contained).toBe(true);
+  await expect.poll(async () => (await readFitGeometry(page)).centeredDelta).toBeLessThan(2);
+  await expect
+    .poll(async () => (await readFitGeometry(page)).limitingUnusedSpace)
+    .toBeGreaterThanOrEqual(62);
+  await expect
+    .poll(async () => (await readFitGeometry(page)).limitingUnusedSpace)
+    .toBeLessThanOrEqual(66);
 }
 
 async function downloadBytes(download: Download): Promise<Buffer> {
@@ -176,11 +238,11 @@ test.describe('preview interaction and PNG export contracts', () => {
     await surface.press('0');
     await expect.poll(() => readViewportState(page)).toEqual({ scale: 1, x: 0, y: 0 });
     await surface.press('f');
-    await expect.poll(async () => (await readViewportState(page)).scale).toBeLessThan(1);
+    await expectPreviewToFit(page);
 
     await reset.click();
     await fit.click();
-    await expect.poll(async () => (await readViewportState(page)).scale).toBeLessThan(1);
+    await expectPreviewToFit(page);
 
     const iframe = page.locator('iframe.preview-frame');
     await expect(iframe).toHaveAttribute('sandbox', 'allow-scripts');
@@ -249,6 +311,19 @@ test.describe('preview interaction and PNG export contracts', () => {
       }
     }
   });
+});
+
+test('fit centers and contains a tall diagram at the largest useful scale', async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  await openRenderedEditor(page, LARGE_VERTICAL_DIAGRAM, 60_000);
+  if (testInfo.project.name === 'mobile-webkit') {
+    await page.getByRole('tab', { name: 'Preview' }).click();
+  }
+  await page.getByRole('button', { name: 'Reset view' }).click();
+  await page.getByRole('button', { name: 'Fit diagram' }).click();
+  await expectPreviewToFit(page);
 });
 
 test('supports touch panning and two-pointer pinch zoom in mobile WebKit', async ({

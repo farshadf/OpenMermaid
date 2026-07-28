@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
+import { DEFAULT_MERMAID_SOURCE } from '../../data/default-source';
 import { copyText } from '@lib/browser/clipboard';
 import {
   MAX_DOCUMENT_TITLE_LENGTH,
@@ -22,25 +23,11 @@ import {
   normalizeMermaidSource,
   type MermaidSourceNormalizationReport,
 } from '@lib/import-export';
-import {
-  defaultMermaidSource,
-  mermaidDiagramCatalog,
-  type MermaidDiagramCatalogEntry,
-} from '@lib/mermaid-language/catalog';
-import {
-  copySanitizedSvg,
-  downloadPng,
-  downloadSanitizedSvg,
-  type PngScale,
-  type SanitizedSvg,
-} from '@lib/rendering';
-import { clearLocalVitalsHistory } from '@lib/performance';
-import {
-  MAX_SHARE_URL_LENGTH,
-  ShareCodecError,
-  decodeShareHash,
-  encodeShareHash,
-} from '@lib/share';
+import type { MermaidDiagramCatalogEntry } from '@lib/mermaid-language/catalog';
+import type { PngScale } from '@lib/rendering/constants';
+import type { SanitizedSvg } from '@lib/rendering/sanitize';
+import { MAX_SHARE_URL_LENGTH } from '@lib/share/constants';
+import { ShareCodecError } from '@lib/share/errors';
 import {
   AutosaveCoordinator,
   DeleteUndoManager,
@@ -93,6 +80,7 @@ export interface EditorAppProps {
 }
 
 const standaloneHostBridge = createStandaloneEditorHostBridge();
+const TEMPLATE_RETRY_SESSION_KEY = 'open-mermaid:retry-template-catalog';
 
 function sameEditableContent(left: DiagramDocumentV1, right: DiagramDocumentV1): boolean {
   return (
@@ -150,6 +138,8 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
   const [storageMode, setStorageMode] = useState<StorageMode>('indexeddb');
   const [saveSnapshot, setSaveSnapshot] = useState<AutosaveSnapshot>({ state: 'idle' });
   const [query, setQuery] = useState('');
+  const [templateCatalog, setTemplateCatalog] = useState<readonly MermaidDiagramCatalogEntry[]>();
+  const [templateCatalogError, setTemplateCatalogError] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [mobilePane, setMobilePane] = useState<MobilePane>('source');
   const [dialog, setDialog] = useState<DialogName>();
@@ -177,9 +167,28 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const libraryButtonRef = useRef<HTMLButtonElement>(null);
   const libraryWasOpenRef = useRef(false);
+  const templateCatalogPromiseRef = useRef<Promise<readonly MermaidDiagramCatalogEntry[]>>();
   const splitRef = useRef<HTMLDivElement>(null);
   const { sourcePercent, dragging, separatorProps } = usePaneResize(splitRef);
   const { preference: colorScheme, setPreference: setColorScheme } = useColorScheme();
+
+  const loadTemplateCatalog = useCallback((): Promise<readonly MermaidDiagramCatalogEntry[]> => {
+    if (templateCatalogPromiseRef.current !== undefined) {
+      return templateCatalogPromiseRef.current;
+    }
+    setTemplateCatalogError(false);
+    templateCatalogPromiseRef.current = import('@lib/mermaid-language/catalog')
+      .then(({ mermaidDiagramCatalog }) => {
+        setTemplateCatalog(mermaidDiagramCatalog);
+        return mermaidDiagramCatalog;
+      })
+      .catch((error: unknown) => {
+        templateCatalogPromiseRef.current = undefined;
+        setTemplateCatalogError(true);
+        throw error;
+      });
+    return templateCatalogPromiseRef.current;
+  }, []);
 
   const commitDraft = useCallback((document: DiagramDocumentV1) => {
     draftRef.current = document;
@@ -205,6 +214,19 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
     if (libraryWasOpenRef.current && !libraryOpen) libraryButtonRef.current?.focus();
     libraryWasOpenRef.current = libraryOpen;
   }, [libraryOpen]);
+
+  useEffect(() => {
+    let retryRequested = false;
+    try {
+      retryRequested = sessionStorage.getItem(TEMPLATE_RETRY_SESSION_KEY) === 'true';
+      sessionStorage.removeItem(TEMPLATE_RETRY_SESSION_KEY);
+    } catch {
+      // Optional recovery state must not block the standalone editor.
+    }
+    if (!retryRequested) return;
+    setDialog('templates');
+    void loadTemplateCatalog().catch(() => undefined);
+  }, [loadTemplateCatalog]);
 
   const replaceDocumentInList = useCallback((document: DiagramDocumentV1) => {
     setDocuments((current) => {
@@ -301,6 +323,7 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
 
       if (/^#v\d+:/u.test(location.hash)) {
         try {
+          const { decodeShareHash } = await import('@lib/share/codec');
           const shared = shareEnvelopeToDocument(decodeShareHash(location.hash));
           await putDuringBootstrap(shared);
           initialDocuments = [shared, ...initialDocuments.filter(({ id }) => id !== shared.id)];
@@ -318,13 +341,27 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
         const requestedTemplate = new URLSearchParams(location.search)
           .get('template')
           ?.replace(/-starter$/u, '');
-        const template = mermaidDiagramCatalog.find(({ id }) => id === requestedTemplate);
+        let template: MermaidDiagramCatalogEntry | undefined;
+        if (requestedTemplate !== undefined) {
+          try {
+            template = (await loadTemplateCatalog()).find(({ id }) => id === requestedTemplate);
+          } catch {
+            showToast(en.editor.templateDialog.loadError, { tone: 'error' });
+          }
+        }
         if (template !== undefined) {
           const fromTemplate = createDiagramDocument({
             title: template.label,
             source: template.source,
           });
           await putDuringBootstrap(fromTemplate);
+          if (import.meta.env.PUBLIC_TELEMETRY_MODE === 'aggregate') {
+            void import('@lib/telemetry/reporter')
+              .then(({ recordTemplateApplied }) => {
+                recordTemplateApplied(template.slug);
+              })
+              .catch(() => undefined);
+          }
           initialDocuments = [
             fromTemplate,
             ...initialDocuments.filter(({ id }) => id !== fromTemplate.id),
@@ -339,7 +376,7 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
       if (initialDocuments.length === 0) {
         const starter = createDiagramDocument({
           title: en.editor.shell.welcomeDiagram,
-          source: defaultMermaidSource,
+          source: DEFAULT_MERMAID_SOURCE,
         });
         await putDuringBootstrap(starter);
         initialDocuments = [starter];
@@ -456,7 +493,7 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
               } else if (replacement === undefined) {
                 replacement = createDiagramDocument({
                   title: en.editor.shell.welcomeDiagram,
-                  source: defaultMermaidSource,
+                  source: DEFAULT_MERMAID_SOURCE,
                 });
                 await repository.put(replacement);
               }
@@ -510,7 +547,13 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
       })();
       deleteUndoRef.current?.dispose();
     };
-  }, [commitDraft, invalidateRenderedOutput, replaceDocumentInList, showToast]);
+  }, [
+    commitDraft,
+    invalidateRenderedOutput,
+    loadTemplateCatalog,
+    replaceDocumentInList,
+    showToast,
+  ]);
 
   const filteredDocuments = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -548,6 +591,23 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
     }
   }, [showToast]);
 
+  const retryTemplateCatalog = useCallback(() => {
+    void (async () => {
+      if (storageMode === 'volatile') {
+        showToast(en.editor.templateDialog.retryUnavailable, { tone: 'error' });
+        return;
+      }
+      if (!(await flushAutosave())) return;
+      setTemplateCatalogError(false);
+      try {
+        sessionStorage.setItem(TEMPLATE_RETRY_SESSION_KEY, 'true');
+      } catch {
+        // Reload still lets the user reopen templates manually if session storage is unavailable.
+      }
+      location.reload();
+    })();
+  }, [flushAutosave, showToast, storageMode]);
+
   const createDocument = useCallback(
     async (
       options: Parameters<typeof createDiagramDocument>[0] = {},
@@ -556,7 +616,7 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
       const repository = repositoryRef.current;
       if (repository === undefined) return undefined;
       try {
-        const document = createDiagramDocument({ source: defaultMermaidSource, ...options });
+        const document = createDiagramDocument({ source: DEFAULT_MERMAID_SOURCE, ...options });
         await repository.put(document);
         savedRevisionsRef.current.set(document.id, document.revision);
         replaceDocumentInList(document);
@@ -740,7 +800,16 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
   const handleTemplate = useCallback(
     (template: MermaidDiagramCatalogEntry) => {
       void createDocument({ source: template.source, title: template.label }).then((created) => {
-        if (created !== undefined) setDialog(undefined);
+        if (created !== undefined) {
+          setDialog(undefined);
+          if (import.meta.env.PUBLIC_TELEMETRY_MODE === 'aggregate') {
+            void import('@lib/telemetry/reporter')
+              .then(({ recordTemplateApplied }) => {
+                recordTemplateApplied(template.slug);
+              })
+              .catch(() => undefined);
+          }
+        }
       });
     },
     [createDocument],
@@ -783,10 +852,11 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
     }
   }, [showToast]);
 
-  const openShareDialog = useCallback(() => {
+  const openShareDialog = useCallback(async () => {
     const current = draftRef.current;
     if (current === undefined) return;
     try {
+      const { encodeShareHash } = await import('@lib/share/codec');
       const hash = encodeShareHash(documentToShareEnvelope(current));
       const url = new URL('/editor/', location.origin);
       url.hash = hash.slice(1);
@@ -806,16 +876,28 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
     const repository = repositoryRef.current;
     if (repository === undefined) return;
     try {
+      const { clearLocalVitalsHistory } = await import('@lib/performance/repository');
+      const telemetry =
+        import.meta.env.PUBLIC_TELEMETRY_MODE === 'aggregate'
+          ? import('@lib/telemetry/queue')
+          : undefined;
       await autosaveRef.current?.cancelAndWait();
-      deleteUndoRef.current?.dispose();
-      await repository.clear();
       await clearLocalVitalsHistory();
+      if (telemetry !== undefined) {
+        const { clearTemplateUsageTelemetry } = await telemetry;
+        await clearTemplateUsageTelemetry();
+      }
+      await repository.clear();
+      deleteUndoRef.current?.dispose();
       clearRecoveryJournal();
       setUndoDeletions([]);
       savedRevisionsRef.current.clear();
       setDocuments([]);
       setDialog(undefined);
-      await createDocument({ title: en.editor.shell.welcomeDiagram, source: defaultMermaidSource });
+      await createDocument({
+        title: en.editor.shell.welcomeDiagram,
+        source: DEFAULT_MERMAID_SOURCE,
+      });
       deleteUndoRef.current = new DeleteUndoManager(repository);
       showToast(en.editor.messages.dataCleared);
     } catch (error) {
@@ -959,7 +1041,10 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
               class="button"
               type="button"
               aria-label={en.editor.shell.chooseTemplate}
-              onClick={() => setDialog('templates')}
+              onClick={() => {
+                setDialog('templates');
+                void loadTemplateCatalog().catch(() => undefined);
+              }}
             >
               <Icon name="template" size={16} />
               <span class="button__label">{en.editor.templates}</span>
@@ -980,7 +1065,7 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
             <button
               class="icon-button icon-button--quiet"
               type="button"
-              onClick={openShareDialog}
+              onClick={() => void openShareDialog()}
               aria-label={en.editor.shell.shareSnapshot}
               title={en.editor.shell.shareSnapshot}
             >
@@ -1163,7 +1248,11 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
 
       <TemplateDialog
         open={dialog === 'templates'}
+        templates={templateCatalog ?? []}
+        loading={templateCatalog === undefined && !templateCatalogError}
+        loadError={templateCatalogError}
         onClose={() => setDialog(undefined)}
+        onRetry={retryTemplateCatalog}
         onSelect={handleTemplate}
       />
       <ShareDialog
@@ -1193,26 +1282,30 @@ export function EditorApp({ hostBridge = standaloneHostBridge }: EditorAppProps)
         onDownloadSource={downloadSource}
         onDownloadSvg={() => {
           if (sanitizedSvg === undefined) return;
-          try {
-            downloadSanitizedSvg(sanitizedSvg, draft.title);
-            showToast(en.editor.messages.svgDownloadStarted);
-          } catch (error) {
-            showToast(errorMessage(error), { tone: 'error' });
-          }
+          void import('@lib/rendering/export')
+            .then(({ downloadSanitizedSvg }) => {
+              downloadSanitizedSvg(sanitizedSvg, draft.title);
+              showToast(en.editor.messages.svgDownloadStarted);
+            })
+            .catch((error: unknown) => showToast(errorMessage(error), { tone: 'error' }));
         }}
         onCopySvg={() => {
           if (sanitizedSvg === undefined) return;
-          void copySanitizedSvg(sanitizedSvg)
+          void import('@lib/rendering/export')
+            .then(({ copySanitizedSvg }) => copySanitizedSvg(sanitizedSvg))
             .then(() => showToast(en.editor.messages.svgCopied))
             .catch((error: unknown) => showToast(errorMessage(error), { tone: 'error' }));
         }}
         onDownloadPng={() => {
           if (sanitizedSvg === undefined) return;
           setExportBusy(true);
-          void downloadPng(sanitizedSvg, draft.title, {
-            scale: pngScale,
-            background: draft.appearance.background,
-          })
+          void import('@lib/rendering/export')
+            .then(({ downloadPng }) =>
+              downloadPng(sanitizedSvg, draft.title, {
+                scale: pngScale,
+                background: draft.appearance.background,
+              }),
+            )
             .then(() => showToast(en.editor.messages.pngDownloadStarted))
             .catch((error: unknown) => showToast(errorMessage(error), { tone: 'error' }))
             .finally(() => setExportBusy(false));

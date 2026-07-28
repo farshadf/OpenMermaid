@@ -1,9 +1,11 @@
 import { diagramTemplates } from '../../data/templates';
+import { DEFAULT_MERMAID_SOURCE } from '../../data/default-source.ts';
 
 export type MermaidDiagramStability = 'stable' | 'beta' | 'experimental';
 
 export interface MermaidDiagramCatalogEntry {
   readonly id: string;
+  readonly slug: string;
   readonly label: string;
   readonly directive: string;
   readonly description: string;
@@ -21,6 +23,7 @@ export const MERMAID_CATALOG_VERSION = '11.16.0-v2';
 export const mermaidDiagramCatalog: readonly MermaidDiagramCatalogEntry[] = Object.freeze(
   diagramTemplates.map((template) => ({
     id: template.slug.replace(/-starter$/u, ''),
+    slug: template.slug,
     label: template.diagramType,
     directive: template.source.trimStart().split(/\s/u, 1)[0] ?? template.diagramType,
     description: template.summary,
@@ -30,10 +33,8 @@ export const mermaidDiagramCatalog: readonly MermaidDiagramCatalogEntry[] = Obje
 );
 
 const firstTemplate = mermaidDiagramCatalog[0];
-if (firstTemplate === undefined) throw new Error('The Mermaid template catalog must not be empty.');
+if (firstTemplate?.source !== DEFAULT_MERMAID_SOURCE) {
+  throw new Error('The Mermaid template catalog must begin with the default editor source.');
+}
 
-export const defaultMermaidSource = firstTemplate.source;
-
-export const mermaidDirectiveKeywords: readonly string[] = Object.freeze([
-  ...new Set(mermaidDiagramCatalog.map(({ directive }) => directive)),
-]);
+export const defaultMermaidSource = DEFAULT_MERMAID_SOURCE;

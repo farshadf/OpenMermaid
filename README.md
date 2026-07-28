@@ -1,6 +1,10 @@
 # Open Mermaid
 
-Open Mermaid is a free, open-source Mermaid editor that runs as a standalone static web application. It provides a local multi-document workspace, guided templates, live validation and preview, immutable snapshot links, sanitized SVG or PNG export, and privacy-preserving performance diagnostics without requiring an account, application backend, API key, analytics service, ChatGPT connection, or runtime CDN.
+Open Mermaid is a Mermaid editor that runs as a standalone static web application. It provides a
+local multi-document workspace, a complete visual template catalog, live validation and preview,
+immutable snapshot links, sanitized SVG or PNG export, and privacy-preserving performance
+diagnostics without requiring an account, application backend, API key, ChatGPT connection, or
+runtime CDN.
 
 > Project status: v1 is under active development. Do not treat the current name, example domain, or preview deployment as launch clearance. Complete the release checklist, including name/domain/trademark review, before a public launch.
 
@@ -25,8 +29,14 @@ Open Mermaid is a free, open-source Mermaid editor that runs as a standalone sta
 - Fragment snapshot sharing with compressed and decompressed size limits
 - Static templates, substantive guides, canonical metadata, structured data, sitemap, robots policy, and `llms.txt`
 - Lighthouse CI, opt-in local Web Vitals history, and an optional aggregate CrUX reporting workflow
+- An optional, separately deployed aggregate template-use adapter with explicit opt-in, a strict
+  data allowlist, prior-day privacy-coarsened counts, and no diagram content
 
-Version 1 deliberately excludes accounts, a backend, cloud sync, collaboration, public galleries, network analytics or telemetry, AI, ChatGPT code, active ads, service workers/offline guarantees, PDF, JPEG, and a visual drag-and-drop builder.
+Version 1 deliberately excludes accounts, a document backend, cloud sync, collaboration, public
+galleries, general-purpose analytics, session replay, identity tracking, AI, ChatGPT code, active
+ads, service workers/offline guarantees, PDF, JPEG, and a visual drag-and-drop builder. Aggregate
+template-use reporting is an optional adapter; the default build contains no telemetry client or
+request and remains fully functional without the collector.
 
 ## Requirements
 
@@ -39,7 +49,7 @@ Version 1 deliberately excludes accounts, a backend, cloud sync, collaboration, 
 
 ```bash
 corepack enable
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --ignore-scripts
 cp .env.example .env
 pnpm dev
 ```
@@ -60,6 +70,9 @@ pnpm typecheck          # Astro and TypeScript checks
 pnpm test:unit          # unit, contract, and security corpus tests
 pnpm test:coverage      # enforced coverage thresholds for the pure shared core
 pnpm build              # checked static production build
+pnpm test:artifact-contract # artifact tamper, extra-file, map, secret, and symlink rejection
+pnpm test:build-reproducibility # byte-identical successive-build verification
+pnpm test:ci-config     # immutable GitHub Action and script-free install policy
 pnpm test:e2e           # Chromium, Firefox, and WebKit workflows
 pnpm test:metadata      # links, metadata, chunks, robots, and sitemap
 pnpm test:deployment    # hardened Docker image and Caddy HTTP contract
@@ -117,6 +130,11 @@ Internet -> host Caddy :80/:443 -> 127.0.0.1:8088 -> static container :8080
 
 No Node process, backend, account, credential, or writable content volume exists at runtime. The final TLD remains a release input; set Caddy and `PUBLIC_SITE_URL` to the same cleared canonical origin. Follow [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for safe existing-Caddy integration, setup from scratch, validation, log inspection, updates, and rollback. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the provider-neutral contract and other static hosts.
 
+Operators who deliberately enable aggregate template-use reporting add a separate same-origin
+collector and SQLite volume; the static application and document workflows remain independent.
+See [docs/AGGREGATE_TELEMETRY.md](docs/AGGREGATE_TELEMETRY.md) for the exact payload, consent,
+retention, deployment, and verification contract.
+
 ## Contributing and governance
 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — development workflow and review expectations
@@ -128,6 +146,7 @@ No Node process, backend, account, credential, or writable content volume exists
 - [docs/DOMAIN_SELECTION.md](docs/DOMAIN_SELECTION.md) — `.app` and `.us` decision criteria
 - [docs/DESIGN.md](docs/DESIGN.md) — visual tokens, inspiration boundary, and UI rules
 - [docs/PERFORMANCE_MEASUREMENT.md](docs/PERFORMANCE_MEASUREMENT.md) — lab, local, and production field system
+- [docs/ADVERTISING.md](docs/ADVERTISING.md) — staged, privacy-preserving advertising implementation plan
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — evidence required before launch
 
 Automated dependency updates are configured with Dependabot. Release CI runs frozen installation, formatting, lint, type checks, unit and browser tests, accessibility and security checks, metadata and bundle checks, audit, license validation, SBOM generation, and Lighthouse budgets.

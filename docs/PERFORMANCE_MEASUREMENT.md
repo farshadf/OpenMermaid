@@ -10,6 +10,13 @@ Accessibility, Best Practices, and SEO. The editor and `/performance/` retain a 
 of 95 and 100 for the other categories. Bundle budgets, dependency boundaries, link/metadata
 checks, and browser interaction tests provide additional regression evidence.
 
+The editor also has a decoded startup-JavaScript ceiling of 145,000 bytes in Chromium. The gate
+counts every same-origin JavaScript resource regardless of whether it was requested as a script or
+module preload, and asserts that CodeMirror, the template catalog, sharing compression, SVG/PNG
+export, SVG sanitization, the optional performance repository, and the Mermaid renderer stay
+deferred until the feature that needs them is used. This is an initial-interactivity budget, not a
+limit on the complete editor feature set.
+
 Lighthouse measures LCP and CLS in the lab and uses Total Blocking Time as an interaction proxy. It cannot measure real INP without user interaction, so a green lab run is necessary but not sufficient field evidence.
 
 ## 2. On-device diagnostics
@@ -41,6 +48,10 @@ Oldest, expired, oversized, and malformed records are pruned or ignored. Storage
 Local p75 uses nearest-rank aggregation. Fewer than 20 matching samples are labeled **directional**. “This browser only” is always visible because local history cannot represent the site's user population.
 
 The top-level collector cannot inspect work inside the sandboxed Mermaid renderer iframe. This limitation is intentional and must remain visible in the diagnostics UI.
+
+The separately optional aggregate template-use adapter is not a performance collector. It accepts
+only the fixed template-application schema and never receives Web Vitals, timing entries, resource
+URLs, page state, or local performance-history records.
 
 ## 3. Production field health
 

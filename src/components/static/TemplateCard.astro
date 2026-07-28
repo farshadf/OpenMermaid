@@ -4,18 +4,36 @@ import DiagramTypeBadge from './DiagramTypeBadge.astro';
 
 interface Props {
   template: DiagramTemplate;
+  headingLevel?: 2 | 3;
+  showThumbnail?: boolean;
 }
 
-const { template } = Astro.props;
+const { template, headingLevel = 2, showThumbnail = false } = Astro.props;
+const Heading = `h${String(headingLevel)}` as 'h2' | 'h3';
 ---
 
-<article class="resource-card">
+<article class="resource-card template-card">
+  {
+    showThumbnail && (
+      <div class="template-card__thumbnail" aria-hidden="true">
+        <img
+          src={`/examples/templates/${template.slug}.svg`}
+          alt=""
+          width="480"
+          height="270"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    )
+  }
   <div class="resource-card__meta">
     <span>{template.diagramType}</span>
     <DiagramTypeBadge maturity={template.maturity} />
   </div>
-  <h2><a href={`/templates/${template.slug}/`}>{template.name}</a></h2>
+  <Heading><a href={`/templates/${template.slug}/`}>{template.name}</a></Heading>
   <p>{template.summary}</p>
+  <p class="template-card__usage" data-template-usage hidden></p>
   <ul class="tag-list" aria-label="Topics">
     {template.keywords.map((keyword) => <li>{keyword}</li>)}
   </ul>
@@ -23,3 +41,40 @@ const { template } = Astro.props;
     >View source and example <span aria-hidden="true">→</span></a
   >
 </article>
+
+<style>
+  .template-card__thumbnail {
+    position: relative;
+    display: grid;
+    aspect-ratio: 16 / 9;
+    margin: calc(-1 * clamp(1.1rem, 3vw, 1.6rem));
+    margin-block-end: var(--space-3);
+    overflow: hidden;
+    place-items: center;
+    border-block-end: 1px solid var(--color-border);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    background: #ffffff;
+  }
+
+  .template-card__thumbnail img {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    padding: 0.75rem;
+    object-fit: contain;
+  }
+
+  .template-card > .text-link {
+    display: inline-flex;
+    gap: 0.3em;
+    align-items: baseline;
+  }
+
+  .template-card__usage {
+    margin-block: -0.35rem var(--space-3);
+    color: var(--color-muted);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+</style>

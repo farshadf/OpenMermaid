@@ -113,6 +113,14 @@ test('opens templates as new documents without replacing current work', async ({
   await expect(page.getByLabel('Mermaid diagram source')).toHaveValue(/Keep --> Original/u);
 });
 
+test('opens a template deep link through the deferred catalog', async ({ page }) => {
+  await page.goto('/editor/?template=gantt-starter');
+
+  await expect(page.locator('#document-title')).toHaveValue('Gantt chart');
+  await expect(page.getByLabel('Mermaid diagram source')).toHaveValue(/^gantt/u);
+  await expect.poll(() => new URL(page.url()).search).toBe('');
+});
+
 test('reveals the editor skip link when it receives keyboard focus', async ({ page }) => {
   await page.locator('body').focus();
   await page.keyboard.press('Tab');
@@ -168,7 +176,11 @@ test('shares an immutable fragment and opens it in a fresh context', async ({ pa
   await context.close();
 });
 
-test('imports supported source and downloads source, SVG, and PNG', async ({ page }) => {
+test('imports supported source and downloads source, SVG, and PNG', async ({
+  page,
+  context,
+  browserName,
+}) => {
   await page.locator('input[type=file]').setInputFiles({
     name: 'imported.mmd',
     mimeType: 'text/plain',
@@ -179,6 +191,11 @@ test('imports supported source and downloads source, SVG, and PNG', async ({ pag
   await expect(page.locator('.render-state')).toContainText(/preview ready/i, { timeout: 30_000 });
 
   await page.getByRole('button', { name: /Export/ }).click();
+  if (browserName === 'chromium') {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.getByRole('button', { name: 'Copy SVG' }).click();
+    await expect(page.getByText('Sanitized SVG copied.')).toBeVisible();
+  }
 
   const sourceDownload = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Mermaid source .mmd' }).click();

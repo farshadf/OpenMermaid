@@ -297,7 +297,7 @@ export const guides: readonly DiagramGuide[] = [
       {
         heading: 'Local is the default boundary',
         paragraphs: [
-          'The standalone application stores documents in the browser and makes no network analytics request. Content leaves the local workspace only when the user explicitly shares, exports, copies, uploads, or pastes it somewhere else.',
+          'The standalone application stores documents in the browser. Diagram content leaves the local workspace only when the user explicitly shares, exports, copies, uploads, or pastes it somewhere else. A deployment may separately offer opt-in aggregate template-use reporting, but that report contains only an allowlisted template identifier and never the diagram or document metadata.',
         ],
       },
     ],

@@ -1,0 +1,9 @@
+<script>
+  if (import.meta.env.PUBLIC_TELEMETRY_MODE === 'aggregate') {
+    void import('../../lib/telemetry/bootstrap')
+      .then(({ bootstrapAggregateTelemetry }) => {
+        bootstrapAggregateTelemetry();
+      })
+      .catch(() => undefined);
+  }
+</script>

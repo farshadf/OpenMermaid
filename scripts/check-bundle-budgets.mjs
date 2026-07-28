@@ -71,6 +71,18 @@ if (localVitalsRuntime.length === 0) {
   });
 }
 
+const templateCatalogueRuntime = assetFiles.filter((file) =>
+  /\/template-catalogue\.[^/]+\.js$/u.test(file),
+);
+if (templateCatalogueRuntime.length !== 1) {
+  errors.push('Expected exactly one page-only template catalogue runtime chunk.');
+} else {
+  enforce('Template catalogue interaction', await sizeReport(templateCatalogueRuntime), {
+    raw: 30_000,
+    gzip: 10_000,
+  });
+}
+
 const rendererPath = new URL('renderer/runtime.js', dist);
 try {
   await stat(rendererPath);

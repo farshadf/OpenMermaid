@@ -1,6 +1,7 @@
 ---
 import { EditorApp } from '../features/editor/EditorApp';
 import VitalsBootstrap from '../components/performance/VitalsBootstrap.astro';
+import TelemetryBootstrap from '../components/telemetry/TelemetryBootstrap.astro';
 import '../styles/editor.css';
 
 export const prerender = true;
@@ -36,7 +37,7 @@ const structuredData = JSON.stringify({
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="robots" content={robots} />
-    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="referrer" content="no-referrer" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f7fb" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#17151d" />
@@ -77,5 +78,6 @@ const structuredData = JSON.stringify({
       </main>
     </noscript>
     <VitalsBootstrap />
+    <TelemetryBootstrap />
   </body>
 </html>

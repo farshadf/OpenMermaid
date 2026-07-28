@@ -1,4 +1,4 @@
-import { mermaidDirectiveKeywords } from '../mermaid-language/catalog';
+import { mermaidDirectiveKeywords } from '../mermaid-language/directives';
 
 /**
  * Normalization is deliberately bounded independently from the 50,000-character

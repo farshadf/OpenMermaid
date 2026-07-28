@@ -6,6 +6,7 @@ const breadcrumbs = [
   { href: '/', label: 'Home' },
   { href: '/privacy/', label: 'Privacy' },
 ] as const;
+const aggregateTelemetryEnabled = import.meta.env.PUBLIC_TELEMETRY_MODE === 'aggregate';
 ---
 
 <BaseLayout
@@ -22,7 +23,7 @@ const breadcrumbs = [
       <p class="lede">
         Diagram content stays on this device unless you explicitly share or export it.
       </p>
-      <p class="muted">Last updated: 2026-07-22</p>
+      <p class="muted">Last updated: 2026-07-27</p>
     </header>
 
     <article class="measure policy-copy">
@@ -31,10 +32,61 @@ const breadcrumbs = [
         <p>
           The standalone Open Mermaid application is delivered as static site files. It has no
           account system and no application server that receives your diagram source. It does not
-          include a network analytics service, session replay, AI services, or ChatGPT connectivity
-          in version 1.
+          include session replay, AI services, or ChatGPT connectivity in version 1. An optional
+          first-party aggregate template-usage system is described below when it is available on
+          this deployment.
         </p>
       </section>
+      {
+        aggregateTelemetryEnabled && (
+          <section>
+            <h2>Optional aggregate template usage</h2>
+            <p>
+              The template catalogue retrieves a delayed public-count snapshot from Open Mermaid's
+              same-origin collector. That request does not send your template selections, editor
+              state, search or filter choices, cookies, credentials, or referrer.
+            </p>
+            <p>
+              You can choose to share a privacy-minimized event after successfully applying a
+              template. This is off by default and applies only to future template selections. Each
+              event contains a one-time random event ID, the template identifier, the catalog
+              version, and the fixed event type. It does not contain diagram source, document titles
+              or IDs, URLs or fragments, search or filter text, performance data, an account, or a
+              persistent user or session identifier.
+            </p>
+            <p>
+              Events are sent to Open Mermaid's same-origin, self-hosted collector. Its network
+              boundary necessarily receives an IP address while handling a request, but access
+              logging is disabled and the address is not stored with usage. Public counts are
+              published no earlier than a later UTC day, thresholded, and rounded lower bounds such
+              as “100+,” so they describe reported uses rather than unique people or every use.
+              Because this unauthenticated endpoint has no account or stable identifier, automated
+              clients can imitate a valid report. These values are directional rather than audited
+              analytics.
+            </p>
+            <label class="telemetry-choice">
+              <input type="checkbox" data-template-telemetry-toggle />
+              <span>Share privacy-minimized template usage</span>
+            </label>
+            <p class="muted" role="status" data-template-telemetry-status>
+              Sharing is off.
+            </p>
+            <p>
+              Turning this off clears events still queued in this browser. Events already combined
+              into aggregate counts cannot be linked back to this browser and therefore cannot be
+              individually removed. Open Mermaid also treats a supported Global Privacy Control
+              browser signal as off.
+            </p>
+            <p>
+              Unsent browser events expire after seven days. The collector keeps only hashed event
+              IDs for eight days to deduplicate retries, per-day aggregate rows for 90 days, and
+              public snapshots for three days. Lifetime totals contain only the catalogue version,
+              allowlisted template ID, and count; they remain until the operator deletes the
+              dedicated telemetry volume.
+            </p>
+          </section>
+        )
+      }
       <section>
         <h2>Data stored in your browser</h2>
         <p>
@@ -73,9 +125,12 @@ const breadcrumbs = [
         <p>
           The browser requests the HTML, CSS, JavaScript, and other static assets needed to load the
           site. The hosting provider can receive ordinary request information such as IP address,
-          user agent, requested path, time, and security logs under its own policy. Open Mermaid v1
-          makes no network analytics, outbound telemetry, remote-font, or runtime CDN request. The
-          optional production CrUX report runs in project automation and does not add a browser
+          user agent, requested path, time, and security logs under its own policy. Open Mermaid
+          makes no session-replay, remote-font, or runtime-CDN request. {
+            aggregateTelemetryEnabled
+              ? 'The catalogue retrieves the public aggregate-count snapshot described above; a template-usage event is sent only after you enable sharing.'
+              : 'This deployment makes no network analytics or outbound telemetry request.'
+          } The optional production CrUX report runs in project automation and does not add a browser
           request.
         </p>
       </section>
@@ -131,5 +186,21 @@ const breadcrumbs = [
 
   .policy-copy section {
     padding-block: 0.4rem 1rem;
+  }
+
+  .telemetry-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+  }
+
+  .telemetry-choice input {
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
+    margin-block-start: 0.15rem;
   }
 </style>

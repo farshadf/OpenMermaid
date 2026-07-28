@@ -1,5 +1,6 @@
 const siteUrl = process.env.PUBLIC_SITE_URL;
 const indexSite = process.env.PUBLIC_INDEX_SITE;
+const telemetryMode = process.env.PUBLIC_TELEMETRY_MODE ?? 'off';
 
 const errors = [];
 
@@ -29,6 +30,10 @@ if (indexSite !== 'true') {
   errors.push(
     'Set PUBLIC_INDEX_SITE=true only after name, domain, content, and production readiness review.',
   );
+}
+
+if (!['off', 'aggregate'].includes(telemetryMode)) {
+  errors.push('PUBLIC_TELEMETRY_MODE must be either "off" or "aggregate".');
 }
 
 if (errors.length > 0) {

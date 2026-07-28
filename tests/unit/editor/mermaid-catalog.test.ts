@@ -10,6 +10,7 @@ import {
   mermaidDiagramCatalog,
   mermaidDirectiveKeywords,
   mermaidDirectivePattern,
+  mermaidLegacyDirectiveAliases,
   mermaidStreamParser,
 } from '@lib/mermaid-language';
 
@@ -144,6 +145,12 @@ describe('maintained Mermaid catalog', () => {
     expect(
       new Set(mermaidDiagramCatalog.map(({ directive }) => directive)).size,
     ).toBeGreaterThanOrEqual(22);
+    expect(new Set(mermaidDirectiveKeywords)).toEqual(
+      new Set([
+        ...mermaidDiagramCatalog.map(({ directive }) => directive),
+        ...mermaidLegacyDirectiveAliases,
+      ]),
+    );
     for (const diagram of mermaidDiagramCatalog) {
       expect(diagram.source.length).toBeGreaterThan(0);
       expect(diagram.source.length).toBeLessThanOrEqual(50_000);

@@ -1,0 +1,113 @@
+# Optional aggregate-telemetry production profile. Use this complete site block
+# instead of openmermaid.caddy only for a PUBLIC_TELEMETRY_MODE=aggregate build.
+{$OPEN_MERMAID_SITE} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+
+	@telemetry_events {
+		method POST
+		path /api/telemetry/v1/template-uses
+	}
+	handle @telemetry_events {
+		request_body {
+			max_size 4096B
+		}
+		reverse_proxy {$OPEN_MERMAID_TELEMETRY_UPSTREAM:127.0.0.1:8091} {
+			header_up -X-Forwarded-For
+			header_up -X-Forwarded-Host
+			header_up -X-Forwarded-Proto
+			header_up -X-Real-IP
+			header_up -Forwarded
+			header_up -Via
+			header_up -Authorization
+			header_up -Cookie
+			header_up -Referer
+			# An explicit empty value also suppresses Go's default
+			# "Go-http-client/1.1" user agent after the browser value is removed.
+			header_up User-Agent ""
+			header_up -Accept-Language
+			header_up -Sec-CH-*
+			header_up -Sec-Fetch-Dest
+			header_up -Sec-Fetch-Mode
+			header_up -Sec-Fetch-User
+			header_up X-OpenMermaid-Client-IP {http.request.remote.host}
+			health_uri /healthz
+			health_status 200
+			health_interval 10s
+			health_timeout 2s
+			health_fails 3
+			health_passes 2
+		}
+	}
+
+	@telemetry_counts {
+		method GET
+		path /api/telemetry/v1/template-counts
+	}
+	handle @telemetry_counts {
+		request_body {
+			max_size 4096B
+		}
+		reverse_proxy {$OPEN_MERMAID_TELEMETRY_UPSTREAM:127.0.0.1:8091} {
+			header_up -X-Forwarded-For
+			header_up -X-Forwarded-Host
+			header_up -X-Forwarded-Proto
+			header_up -X-OpenMermaid-Client-IP
+			header_up -X-Real-IP
+			header_up -Forwarded
+			header_up -Via
+			header_up -Authorization
+			header_up -Cookie
+			header_up -Origin
+			header_up -Referer
+			header_up User-Agent ""
+			header_up -Accept-Language
+			header_up -Sec-CH-*
+			header_up -Sec-Fetch-*
+			header_up -Sec-GPC
+			health_uri /healthz
+			health_status 200
+			health_interval 10s
+			health_timeout 2s
+			health_fails 3
+			health_passes 2
+		}
+	}
+
+	@telemetry_events_wrong_method path /api/telemetry/v1/template-uses
+	handle @telemetry_events_wrong_method {
+		request_body {
+			max_size 4096B
+		}
+		header Allow "POST"
+		respond 405
+	}
+
+	@telemetry_counts_wrong_method path /api/telemetry/v1/template-counts
+	handle @telemetry_counts_wrong_method {
+		request_body {
+			max_size 4096B
+		}
+		header Allow "GET"
+		respond 405
+	}
+
+	@unknown_telemetry_path path /api/telemetry/*
+	handle @unknown_telemetry_path {
+		request_body {
+			max_size 4096B
+		}
+		respond 404
+	}
+
+	handle {
+		reverse_proxy {$OPEN_MERMAID_UPSTREAM:127.0.0.1:8088} {
+			health_uri /healthz
+			health_status 200
+			health_interval 10s
+			health_timeout 2s
+			health_fails 3
+			health_passes 2
+		}
+	}
+}

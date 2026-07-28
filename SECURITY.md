@@ -48,10 +48,20 @@ Maintainers may ask for additional evidence, merge duplicate reports, or decline
 - Rendering and sharing enforce input, output, time, edge, compressed, and decompressed bounds.
 - The application discards stale renders and retains the last known-good preview when new source is invalid.
 - Static public pages do not ship Mermaid or CodeMirror runtime chunks.
+- The default telemetry-off artifact emits no aggregate-reporting client, request, queue, or relaxed
+  connection policy.
+- The optional aggregate adapter accepts only exact, bounded template-use payloads with an
+  allowlisted template ID, stores no raw event rows, and never receives diagram source, document
+  metadata, URL state, performance data, identity, or session data.
 - No active ad code has access to the editor, URL fragment, document source, or same-origin storage.
 
 ## Deployment responsibility
 
-The repository produces static files and provider examples. Operators are responsible for HTTPS, canonical origin, security headers, caching, preview noindex controls, access logs, artifact integrity, dependency updates, and rollback. A deployment that weakens the included policy or injects third-party scripts has a different threat model and must not make the same privacy claim without review.
+The repository produces static files, an optional isolated aggregate collector, and provider
+examples. Operators are responsible for HTTPS, canonical origin, exact telemetry routing when
+enabled, security headers, caching, preview noindex controls, access logs, artifact integrity,
+dependency updates, and rollback. A deployment that weakens the included policy or injects
+third-party scripts has a different threat model and must not make the same privacy claim without
+review.
 
 See [docs/SECURITY_HEADERS.md](docs/SECURITY_HEADERS.md) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

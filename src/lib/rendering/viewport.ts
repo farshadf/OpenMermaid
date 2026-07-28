@@ -55,6 +55,27 @@ function parseViewBox(svg: SVGSVGElement): { width: number; height: number } | u
   return undefined;
 }
 
+function renderedDimensions(
+  svg: SVGSVGElement,
+  currentScale: number,
+): { width: number; height: number } | undefined {
+  const bounds = svg.getBoundingClientRect();
+  if (
+    Number.isFinite(bounds.width) &&
+    bounds.width > 0 &&
+    Number.isFinite(bounds.height) &&
+    bounds.height > 0 &&
+    Number.isFinite(currentScale) &&
+    currentScale > 0
+  ) {
+    return {
+      width: bounds.width / currentScale,
+      height: bounds.height / currentScale,
+    };
+  }
+  return parseViewBox(svg);
+}
+
 export class PreviewViewport {
   private readonly surface: HTMLElement;
   private readonly scene: HTMLElement;
@@ -149,7 +170,10 @@ export class PreviewViewport {
 
   private fitToBounds(): ViewportState {
     const svg = this.scene.querySelector('svg');
-    const dimensions = svg ? parseViewBox(svg) : undefined;
+    // Mermaid commonly emits width="100%" alongside a large viewBox. The SVG's
+    // actual CSS box can therefore be much smaller than its viewBox. Fit the box
+    // users can see, removing our current scene scale from the measured bounds.
+    const dimensions = svg ? renderedDimensions(svg, this.stateValue.scale) : undefined;
     const bounds = this.surface.getBoundingClientRect();
     if (!dimensions || bounds.width <= 0 || bounds.height <= 0) {
       return this.setState({ scale: 1, x: 0, y: 0 });

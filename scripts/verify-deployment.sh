@@ -4,7 +4,7 @@ set -eu
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$project_root"
 
-for command_name in curl docker node rg; do
+for command_name in cmp curl docker node rg; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "Missing required command: $command_name" >&2
     exit 1
@@ -15,6 +15,8 @@ if [ ! -f dist/index.html ]; then
   echo "dist/index.html is missing; run pnpm build first." >&2
   exit 1
 fi
+
+node scripts/dist-manifest.mjs verify
 
 verify_suffix=$$
 compose_project="open-mermaid-verify-${verify_suffix}"
@@ -124,6 +126,14 @@ NODE
 docker exec "$app_container" sh -c 'test ! -w /usr/share/nginx/html'
 docker exec "$app_container" sh -c \
   'awk '\''$1 == "CapEff:" { exit $2 == "0000000000000000" ? 0 : 1 }'\'' /proc/1/status'
+
+echo "Verifying that the container serves the exact manifest-backed artifact"
+mkdir "$verify_dir/container-dist"
+docker cp "$app_container:/usr/share/nginx/html/." "$verify_dir/container-dist"
+cmp \
+  dist/openmermaid-artifact-manifest.json \
+  "$verify_dir/container-dist/openmermaid-artifact-manifest.json"
+node scripts/dist-manifest.mjs verify --root "$verify_dir/container-dist"
 
 app_origin="http://127.0.0.1:${app_port}"
 fetch "$app_origin/" "$verify_dir/app-main.headers" "$verify_dir/app-main.html"

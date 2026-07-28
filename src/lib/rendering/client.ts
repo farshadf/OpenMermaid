@@ -13,7 +13,7 @@ import {
   type RendererResponseMessage,
   type RendererViewportRequestPayload,
 } from './protocol';
-import { sanitizeSvg, type SanitizedSvg } from './sanitize';
+import type { SanitizedSvg } from './sanitize';
 import type { ViewportState } from './viewport';
 
 export interface RendererRenderResult {
@@ -174,6 +174,16 @@ export class RendererFrameClient {
     }
 
     // Re-sanitize at the trust boundary before exposing data to copy/download helpers.
+    const { sanitizeSvg } = await import('./sanitize');
+    // The first sanitizer import may require a network turn. A newer edit can
+    // become authoritative, or the isolated realm can be replaced, while that
+    // optional chunk is loading.
+    if (this.disposed || response.sessionId !== this.sessionIdValue) {
+      throw new RendererResetError('The isolated renderer changed before sanitization completed.');
+    }
+    if (response.revision < this.latestRenderRevision) {
+      throw new RendererOperationError('stale', response.revision, 'A newer preview is available.');
+    }
     const result: RendererRenderResult = {
       revision: response.revision,
       ...(response.payload.diagramType ? { diagramType: response.payload.diagramType } : {}),

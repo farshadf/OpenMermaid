@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7.0@sha256:dbbd5e059e8a07ff7ea6233b213b36aa516b4c53c645f1817a4dd18b83cbea56
 
 # The release pipeline builds and tests dist/ before this artifact-only image is
 # assembled. Keep both the version and multi-platform image index immutable.
@@ -7,6 +7,11 @@ FROM nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82
 LABEL org.opencontainers.image.title="Open Mermaid" \
       org.opencontainers.image.description="Standalone browser-based Mermaid editor" \
       org.opencontainers.image.licenses="MIT"
+
+# The upstream image contains default index and error pages. Empty its complete
+# document root so the runtime can contain only the verified dist/ artifact.
+USER 0
+RUN find /usr/share/nginx/html -mindepth 1 -delete
 
 COPY --chown=0:0 --chmod=0444 ops/docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --chown=0:0 --chmod=0444 ops/docker/main-security-headers.conf /etc/nginx/main-security-headers.conf

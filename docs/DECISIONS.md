@@ -115,3 +115,31 @@ Keep Lighthouse CI as the lab regression gate. Measure the current `/performance
 Use host-installed Caddy as the only public listener on ports 80/443 and proxy to an unprivileged static container explicitly published at `127.0.0.1:8088`. Package the already-tested `dist/` in a digest-pinned Nginx image; never rebuild application source in the runtime image. Caddy owns public HTTPS, canonical redirects, dynamic compression, HSTS, and proxy health checks. The inner server owns MIME, cache rules, route-specific response headers, `/healthz`, and real 404 behavior.
 
 Keep Caddy outside Compose so it can serve other host applications and remain available across Open Mermaid replacements and rollbacks. The container receives no source, credential, Docker socket, persistent content volume, or browser document data. `dist/` remains provider-neutral, and alternative compliant static hosts remain supported.
+
+## ADR-017: Aggregate template telemetry is an optional adapter
+
+- **Status:** Accepted
+- **Date:** 2026-07-27
+
+Keep the standalone application and every document workflow independent of telemetry. The default
+`PUBLIC_TELEMETRY_MODE=off` build emits no telemetry bootstrap, request, queue, or consent storage
+and retains `connect-src 'none'`. An operator may instead build
+`PUBLIC_TELEMETRY_MODE=aggregate` and deploy the separately packaged same-origin collector behind
+Caddy.
+
+The initial event vocabulary contains only a successful, user-initiated template application. Its
+strict payload is an event UUID, a catalog version, and an allowlisted template slug. It may never
+contain diagram source, title, document or browser identifiers, URL, query, fragment, template
+search/filter state, referrer, user agent, locale, viewport, performance data, ad data, or arbitrary
+properties. Reporting is explicit opt-in, honors Global Privacy Control when available, and never
+blocks editor behavior. A bounded, expiring retry queue is isolated from document storage.
+
+The collector deduplicates retries, immediately aggregates accepted events, and stores no raw event
+rows. The public catalog receives prior-day, coarsened lower bounds only: templates below the
+minimum reporting threshold have no visible count, and eligible values are displayed as labels such
+as “20+ reported uses.” These unauthenticated directional values describe accepted
+template-application reports, not audited analytics, unique people, or every use of a template.
+
+This adapter does not supersede ADR-003 for documents, rendering, sharing, import, or export, and it
+does not change ADR-015: local Web Vitals remain local and are not sent to this collector. The
+portable static build remains the default deployment contract.

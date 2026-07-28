@@ -1,6 +1,9 @@
 # Docker behind host Caddy
 
-This is the canonical self-hosted production profile for Open Mermaid. The application remains a portable static artifact; Docker is only its packaging and serving boundary, and Caddy is the only public network edge.
+This is the canonical self-hosted production profile for Open Mermaid. The application remains a
+portable static artifact; Docker is its default packaging and serving boundary, and Caddy is the
+only public network edge. Aggregate template-use telemetry is a separately packaged, optional
+adapter and is not required by the application.
 
 ```text
 Internet
@@ -10,7 +13,10 @@ Internet
   -> tested dist/ artifact
 ```
 
-The application has no server-side database, account service, API key, OpenAI connection, analytics endpoint, or writable content volume. Browser documents remain in each visitor's local browser storage.
+The default telemetry-off application has no server-side database, account service, API key, OpenAI
+connection, analytics endpoint, or writable content volume. Browser documents remain in each
+visitor's local browser storage. The optional aggregate profile adds only a dedicated telemetry
+SQLite volume; it never receives browser documents.
 
 ## Prerequisites and ownership
 
@@ -40,6 +46,7 @@ pnpm install --frozen-lockfile
 
 export PUBLIC_SITE_URL=https://openmermaid.example
 export PUBLIC_INDEX_SITE=true
+export PUBLIC_TELEMETRY_MODE=off
 export OPEN_MERMAID_IMAGE_TAG="$(git rev-parse --short=12 HEAD)"
 
 pnpm build:release
@@ -80,6 +87,70 @@ curl --fail --show-error http://127.0.0.1:8088/healthz
 The resolved Compose configuration must show `host_ip: 127.0.0.1`. Never change the mapping to `8088:8080`, `0.0.0.0:8088:8080`, or a public host address. Docker warns that published container ports can bypass expected firewall behavior; the explicit loopback bind is part of the security boundary.
 
 The runtime runs as UID/GID `101:101`, drops all Linux capabilities, enables `no-new-privileges`, limits PIDs and log growth, uses a read-only root, and provides only a small `tmpfs` for Nginx's runtime files. It mounts no Docker socket, source tree, credentials, or persistent volume.
+
+## Optional aggregate template-use profile
+
+Skip this section unless the release was deliberately built with
+`PUBLIC_TELEMETRY_MODE=aggregate`. The static application remains the default and does not degrade
+when the adapter is absent.
+
+Set an exact canonical origin and source-derived image tags:
+
+```bash
+export PUBLIC_SITE_URL=https://openmermaid.example
+export PUBLIC_INDEX_SITE=true
+export PUBLIC_TELEMETRY_MODE=aggregate
+export OPEN_MERMAID_IMAGE_TAG=<reviewed-commit-id>
+export OPEN_MERMAID_TELEMETRY_IMAGE_TAG=<reviewed-commit-id>
+export OPEN_MERMAID_TELEMETRY_ORIGIN=https://openmermaid.example
+export OPEN_MERMAID_TELEMETRY_BIND_PORT=8091
+
+pnpm build:release
+pnpm test:metadata
+pnpm test:independence
+pnpm test:telemetry-deployment
+docker compose -f compose.yml -f compose.telemetry.yml \
+  up --detach --build --wait
+
+curl --fail --show-error http://127.0.0.1:8088/healthz
+curl --fail --show-error http://127.0.0.1:8091/healthz
+```
+
+The overlay builds the collector from `services/telemetry/`, publishes it only on host loopback,
+and mounts one named SQLite volume at `/data`. The collector has no access to `dist/`, browser
+documents, host Caddy state, the Docker socket, or unrelated host paths. Its root filesystem is
+read-only and the container runs non-root with dropped capabilities and `no-new-privileges`.
+The default runtime ceiling is 0.50 CPU, 256 MiB memory with no additional swap, 64 processes,
+1,024 open files, and no core dumps. Treat those limits as a tested baseline and measure before
+raising them.
+
+The telemetry verifier uses ports 18188, 18189, and 18191 by default and removes its disposable
+containers and SQLite volume on exit. When a port is occupied, select unused loopback ports:
+
+```bash
+OPEN_MERMAID_VERIFY_TELEMETRY_APP_PORT=28188 \
+OPEN_MERMAID_VERIFY_TELEMETRY_EDGE_PORT=28189 \
+OPEN_MERMAID_VERIFY_TELEMETRY_COLLECTOR_PORT=28191 \
+pnpm test:telemetry-deployment
+```
+
+Install `ops/caddy/openmermaid-telemetry.caddy` for this profile. It routes only:
+
+- `POST /api/telemetry/v1/template-uses`;
+- `GET /api/telemetry/v1/template-counts`.
+
+The collector's `/healthz` stays loopback-only. Never publish port 8091 to `0.0.0.0`, proxy a
+catch-all API prefix, or expose the SQLite volume through the static service. Validate the complete
+Caddyfile before reload and verify that unrelated sites are unchanged.
+
+Turning the adapter off is two separate, deliberate operations: first deploy a newly tested
+`PUBLIC_TELEMETRY_MODE=off` static artifact, then restore the ordinary
+`ops/caddy/openmermaid.caddy` snippet and stop the telemetry overlay. Retain the SQLite volume until
+the operator's approved retention/deletion decision; do not silently destroy it during an
+application rollback.
+
+The complete payload, opt-in, queue, aggregation, privacy, and validation contract is documented in
+[`AGGREGATE_TELEMETRY.md`](AGGREGATE_TELEMETRY.md).
 
 ## Reuse or install host Caddy
 
@@ -176,7 +247,11 @@ docker compose logs --since 15m --no-color
 sudo journalctl -u caddy --since '15 minutes ago' --no-pager
 ```
 
-Nginx access logging is disabled and Caddy access logging is not enabled by the supplied snippet. This avoids creating a second analytics-like data stream by default. If operational access logs are later enabled, define retention, access controls, redaction, and privacy wording first; IP addresses and user agents are personal or sensitive operational data in many contexts.
+Nginx access logging is disabled and Caddy access logging is not enabled by the supplied snippets.
+The optional collector also emits no per-request access log. This avoids creating a second
+analytics-like data stream by default. If operational access logs are later enabled, define
+retention, access controls, redaction, and privacy wording first; IP addresses and user agents are
+personal or sensitive operational data in many contexts.
 
 ## Update and rollback
 
@@ -197,7 +272,11 @@ curl --fail --show-error http://127.0.0.1:8088/healthz
 sudo systemctl reload caddy
 ```
 
-Caddy normally does not change for an application-only rollback; reload it only when its validated configuration was also restored. Do not delete the failed image or previous artifact until the incident is understood. Open Mermaid has no server-side document database to migrate, but browser storage compatibility must still be included in rollback smoke tests.
+Caddy normally does not change for an application-only rollback; reload it only when its validated
+configuration was also restored. Do not delete the failed image or previous artifact until the
+incident is understood. Open Mermaid has no server-side document database to migrate, but browser
+storage compatibility must still be included in rollback smoke tests. The optional telemetry
+database is not a document store; retain or remove it only under its separate operational policy.
 
 ## Upgrades and supply chain
 
