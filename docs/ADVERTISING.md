@@ -12,6 +12,10 @@ The privacy objective is not zero agency processing, which would be incompatible
 measurement. It is to let the agency measure eligible advertising traffic while making local
 diagram data technically unavailable to its code.
 
+For the ordered account, consent, build, deployment, verification, monitoring, and rollback
+procedure, use [PRODUCTION_ADS_ROLLOUT.md](PRODUCTION_ADS_ROLLOUT.md). Its launch blockers are
+mandatory even when the agency build contract passes.
+
 ## Non-negotiable boundary
 
 Agency code and editor storage must use different hostnames:
@@ -288,6 +292,8 @@ For a provider, consent, privacy, security, performance, or policy incident:
 
 Agency advertising is not ready to activate until all items are true:
 
+- every blocker in [PRODUCTION_ADS_ROLLOUT.md](PRODUCTION_ADS_ROLLOUT.md) is closed with recorded
+  evidence;
 - canonical public and editor hostnames are selected and covered by HTTPS;
 - name/domain clearance and operator/contact details are complete;
 - the agency account and site are approved;

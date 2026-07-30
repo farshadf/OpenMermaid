@@ -164,6 +164,7 @@ retention, deployment, and verification contract.
 - [docs/DESIGN.md](docs/DESIGN.md) — visual tokens, inspiration boundary, and UI rules
 - [docs/PERFORMANCE_MEASUREMENT.md](docs/PERFORMANCE_MEASUREMENT.md) — lab, local, and production field system
 - [docs/ADVERTISING.md](docs/ADVERTISING.md) — agency measurement, origin isolation, consent, and release controls
+- [docs/PRODUCTION_ADS_ROLLOUT.md](docs/PRODUCTION_ADS_ROLLOUT.md) — agency account, consent, production activation, reporting, and rollback runbook
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) — evidence required before launch
 
 Automated dependency updates are configured with Dependabot. Release CI runs frozen installation, formatting, lint, type checks, unit and browser tests, accessibility and security checks, metadata and bundle checks, audit, license validation, SBOM generation, and Lighthouse budgets.

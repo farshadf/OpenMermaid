@@ -6,6 +6,10 @@ An optional aggregate template-use profile adds a separately packaged same-origi
 static application remains fully functional without it. Agency advertising is another explicit
 artifact mode and requires distinct public-content and editor hostnames.
 
+Use [PRODUCTION_ADS_ROLLOUT.md](PRODUCTION_ADS_ROLLOUT.md) before building or promoting an
+agency-enabled artifact. A valid build is necessary but is not provider, consent, legal, or
+operational approval.
+
 ## Release inputs
 
 - Node 24 LTS and the pinned pnpm 10 release

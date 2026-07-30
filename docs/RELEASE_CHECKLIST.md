@@ -60,6 +60,9 @@ A public release requires evidence for every applicable item. “Not tested” i
 - [ ] If agency mode is enabled, the provider account/site, CMP, privacy notice, vendor inventory,
       `/ads.txt`, consent withdrawal, restricted-serving behavior, and reporting access are
       approved and current.
+- [ ] Every launch blocker and ordered gate in `PRODUCTION_ADS_ROLLOUT.md` is closed with retained
+      evidence, including the agency-page referrer policy, persistent privacy-choice access,
+      real-browser CMP matrix, and production-origin request capture.
 - [ ] Agency inventory is limited to one content stripe on guide/template detail pages; no provider
       code or request appears on the editor, renderer, fragment shares, homepage, indexes, policies,
       performance diagnostics, or 404.
