@@ -2,7 +2,7 @@
 
 # The release pipeline builds and tests dist/ before this artifact-only image is
 # assembled. Keep both the version and multi-platform image index immutable.
-FROM nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65
+FROM nginxinc/nginx-unprivileged:1.31.4-alpine-slim@sha256:d668aa123a6ec3216ba5ae6b398ae8001d5e81d3142d3659e20354fd0c3c3125
 
 LABEL org.opencontainers.image.title="Open Mermaid" \
       org.opencontainers.image.description="Standalone browser-based Mermaid editor" \
